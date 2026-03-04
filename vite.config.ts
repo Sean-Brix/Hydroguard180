@@ -19,4 +19,10 @@ export default defineConfig({
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
+
+  // Build configuration - output to server/public for deployment
+  build: {
+    outDir: path.resolve(__dirname, './server/public'),
+    emptyOutDir: true,
+  },
 })

@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const prisma = require('./db');
 const { logger } = require('./middleware/logger');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
@@ -25,6 +26,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(logger);
 
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, '../public')));
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
@@ -41,8 +45,10 @@ app.use('/api/audit-logs', auditLogRoutes);
 app.use('/api/faqs', faqRoutes);
 app.use('/api/inquiries', inquiryRoutes);
 
-// 404 handler
-app.use(notFound);
+// Serve React app for all non-API routes (SPA routing)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
 
 // Error handler (must be last)
 app.use(errorHandler);
