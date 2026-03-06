@@ -1,6 +1,6 @@
 import { motion, useInView } from 'motion/react';
 import {
-  MapPin, Users, TrendingUp, Heart, Mountain,
+  MapPin, Users, Heart, Mountain,
   Shield, Zap, Building2, Landmark,
   ChevronRight, Navigation, BarChart3, Baby, ArrowUpRight
 } from 'lucide-react';
@@ -31,18 +31,6 @@ export function About() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
-
-  const populationData = [
-    { year: '1990', population: 1655 },
-    { year: '1995', population: 4909 },
-    { year: '2000', population: 8799 },
-    { year: '2007', population: 9231 },
-    { year: '2010', population: 14120 },
-    { year: '2015', population: 16500 },
-    { year: '2020', population: 18802 },
-  ];
-
-  const maxPop = Math.max(...populationData.map(d => d.population));
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -291,72 +279,7 @@ export function About() {
             ))}
           </motion.div>
 
-          {/* Population Growth Chart */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="bg-white rounded-2xl border border-gray-200/80 shadow-sm p-6 md:p-8"
-          >
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h3 className="text-xl font-bold text-[#1F2937] mb-1">Population Growth</h3>
-                <p className="text-sm text-gray-500">Historical census data from 1990 to 2020</p>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-400">
-                <TrendingUp size={16} className="text-[#FF6A00]" />
-                <span>+1,036% growth</span>
-              </div>
-            </div>
 
-            {/* Visual bar chart */}
-            <div className="flex items-end gap-3 md:gap-5 h-52 mb-6">
-              {populationData.map((data, index) => {
-                const heightPercent = (data.population / maxPop) * 100;
-                return (
-                  <motion.div
-                    key={data.year}
-                    className="flex-1 flex flex-col items-center gap-2 h-full"
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1, duration: 0.5 }}
-                    viewport={{ once: true }}
-                  >
-                    <span className="text-xs text-gray-500 font-medium">
-                      {data.population.toLocaleString()}
-                    </span>
-                    <div className="w-full flex-1 flex items-end">
-                      <motion.div
-                        className="w-full rounded-t-lg relative group"
-                        initial={{ height: 0 }}
-                        whileInView={{ height: `${heightPercent}%` }}
-                        transition={{ delay: index * 0.1 + 0.3, duration: 0.6, ease: 'easeOut' }}
-                        viewport={{ once: true }}
-                        style={{
-                          minHeight: '4px',
-                          background: index === populationData.length - 1
-                            ? 'linear-gradient(to top, #FF6A00, #FF8C3A)'
-                            : 'linear-gradient(to top, #e5e7eb, #d1d5db)',
-                        }}
-                      >
-                        {index === populationData.length - 1 && (
-                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#FF6A00] rounded-full border-2 border-white shadow-sm" />
-                        )}
-                      </motion.div>
-                    </div>
-                    <span className="text-xs text-gray-400">{data.year}</span>
-                  </motion.div>
-                );
-              })}
-            </div>
-
-            <div className="border-t border-gray-100 pt-4">
-              <p className="text-sm text-gray-500 text-center">
-                Consistent growth from <span className="font-semibold text-[#1F2937]">1,655</span> residents in 1990 to <span className="font-semibold text-[#FF6A00]">18,802</span> in 2020
-              </p>
-            </div>
-          </motion.div>
         </div>
       </section>
 

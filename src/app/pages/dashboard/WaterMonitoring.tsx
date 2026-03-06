@@ -30,14 +30,11 @@ export function WaterMonitoring() {
 
   // Real-time SSE updates
   const handleWaterMonitoringUpdate = useCallback((newRecord: any) => {
-    console.log('🌊 WaterMonitoring real-time update:', newRecord);
-    
     setReadings(prev => {
-      // Add new record at the beginning (most recent first)
-      const updated = [newRecord, ...prev];
-      return updated;
+      // Deduplicate: skip if record already exists (e.g. from manual add)
+      if (prev.some(r => r.id === newRecord.id)) return prev;
+      return [newRecord, ...prev];
     });
-    
     toast.success(`New water level reading: ${newRecord.waterLevel} cm`, {
       description: `Alert Level ${newRecord.alertLevel} - ${format(new Date(newRecord.timestamp), 'PPp')}`,
     });
@@ -89,15 +86,23 @@ export function WaterMonitoring() {
       setLoading(true);
       const waterLevel = parseFloat(newReading.waterLevel);
       
-      // Alert level will be calculated automatically by the backend
-      await waterMonitoringAPI.create({
+      // Alert level is calculated automatically by the backend
+      const created = await waterMonitoringAPI.create({
         waterLevel,
         rainfallIndicator: newReading.rainfallIndicator,
         deviceStatus: 'Online',
         notes: 'Manual entry',
       });
 
-      await loadReadings();
+      // Optimistically insert the returned record so the UI updates instantly.
+      // When SSE fires with the same record, deduplication by ID prevents a duplicate.
+      if (created?.id) {
+        setReadings(prev => {
+          if (prev.some(r => r.id === created.id)) return prev;
+          return [created, ...prev];
+        });
+      }
+
       setShowAddDialog(false);
       setNewReading({ waterLevel: '', rainfallIndicator: 'None' });
       toast.success('Reading added successfully');
@@ -279,7 +284,21 @@ export function WaterMonitoring() {
   return (
     <div className="flex flex-col h-full min-h-0 gap-4 lg:overflow-hidden overflow-y-auto custom-scrollbar">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 flex-shrink-0">
-        
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-bold text-[#1F2937]">Water Monitoring</h1>
+          <span
+            className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${
+              isConnected ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'
+            }`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                isConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
+              }`}
+            />
+            {isConnected ? 'Live' : 'Connecting…'}
+          </span>
+        </div>
 
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => window.print()}>
