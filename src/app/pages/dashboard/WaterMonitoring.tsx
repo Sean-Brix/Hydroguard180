@@ -21,7 +21,6 @@ export function WaterMonitoring() {
   const [loading, setLoading] = useState(false);
   const [newReading, setNewReading] = useState({
     waterLevel: '',
-    rainfallIndicator: 'None',
   });
 
   useEffect(() => {
@@ -89,7 +88,6 @@ export function WaterMonitoring() {
       // Alert level is calculated automatically by the backend
       const created = await waterMonitoringAPI.create({
         waterLevel,
-        rainfallIndicator: newReading.rainfallIndicator,
         deviceStatus: 'Online',
         notes: 'Manual entry',
       });
@@ -148,14 +146,13 @@ export function WaterMonitoring() {
           format(new Date(reading.timestamp), 'MMM dd, yyyy'),
           format(new Date(reading.timestamp), 'h:mm a'),
           `${reading.waterLevel} ${reading.waterLevelUnit || 'm'}`,
-          `Level ${reading.alertLevel} - ${alertInfo?.name || 'Unknown'}`,
-          reading.rainfallIndicator || 'N/A'
+          `Level ${reading.alertLevel} - ${alertInfo?.name || 'Unknown'}`
         ];
       });
       
       autoTable(doc, {
         startY: yPosition,
-        head: [['Date', 'Time', 'Water Level', 'Alert Level', 'Rainfall']],
+        head: [['Date', 'Time', 'Water Level', 'Alert Level']],
         body: tableData,
         theme: 'grid',
         headStyles: { fillColor: [38, 52, 58] },
@@ -342,15 +339,6 @@ export function WaterMonitoring() {
                     onValueChange={(value) => setNewReading({ ...newReading, rainfallIndicator: value })}
                     disabled={loading}
                   >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="None">None</SelectItem>
-                      <SelectItem value="Light">Light</SelectItem>
-                      <SelectItem value="Moderate">Moderate</SelectItem>
-                      <SelectItem value="Heavy">Heavy</SelectItem>
-                    </SelectContent>
                   </Select>
                 </div>
                 <div className="flex gap-2">
