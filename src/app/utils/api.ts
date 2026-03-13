@@ -179,7 +179,7 @@ export const waterMonitoringAPI = {
     return handleResponse(response);
   },
 
-  create: async (data: { waterLevel: number; waterLevelUnit?: string; rainfallIndicator?: string; deviceStatus?: string; notes?: string }) => {
+  create: async (data: { waterLevel: number; waterLevelUnit?: string; deviceStatus?: string; notes?: string }) => {
     return fetchWithAuth('/water-monitoring', {
       method: 'POST',
       body: JSON.stringify(data),
