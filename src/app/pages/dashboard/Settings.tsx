@@ -7,8 +7,7 @@ import { Switch } from '../../components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../components/ui/dialog';
 import { Label } from '../../components/ui/label';
 import { toast } from 'sonner';
-import { settingsAPI, auditLogsAPI } from '../../utils/api';
-import { getSettings, getWaterMonitoring, getUsers, getResidents } from '../../utils/database';
+import { settingsAPI, auditLogsAPI, usersAPI } from '../../utils/api';
 import { format } from 'date-fns';
 
 export function Settings() {
@@ -205,7 +204,7 @@ export function Settings() {
       }
       
       // Users Summary
-      const users = getUsers();
+      const users = await usersAPI.getAll();
       if (users.length > 0 && yPosition < 250) {
         doc.setFontSize(14);
         doc.text('User Accounts', 14, yPosition);

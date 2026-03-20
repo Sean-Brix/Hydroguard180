@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authAPI } from '../utils/api';
+import { TOKEN_EXPIRED_EVENT } from '../utils/api';
 
 export type UserRole = 'Super Admin' | 'Admin' | 'Staff';
 
@@ -37,6 +38,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem('hydroguard_token');
       }
     }
+  }, []);
+
+  useEffect(() => {
+    const handleTokenExpired = () => {
+      setUser(null);
+      localStorage.removeItem('hydroguard_user');
+      localStorage.removeItem('hydroguard_token');
+
+      if (window.location.pathname !== '/login') {
+        window.location.replace('/login');
+      }
+    };
+
+    window.addEventListener(TOKEN_EXPIRED_EVENT, handleTokenExpired);
+    return () => window.removeEventListener(TOKEN_EXPIRED_EVENT, handleTokenExpired);
   }, []);
 
   const login = async (username: string, password: string): Promise<{ success: boolean; error?: string }> => {

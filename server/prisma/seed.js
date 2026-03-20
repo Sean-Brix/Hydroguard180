@@ -10,6 +10,30 @@ const waterMonitoring = require('../../src/database/water-monitoring.json');
 const settingsData = require('../../src/database/settings.json');
 const auditLogs = require('../../src/database/audit-logs.json');
 
+const DEFAULT_ALERT_THRESHOLDS = {
+  1: { minWaterLevel: 80, maxWaterLevel: 999 },
+  2: { minWaterLevel: 60, maxWaterLevel: 80 },
+  3: { minWaterLevel: 40, maxWaterLevel: 60 },
+  4: { minWaterLevel: 0, maxWaterLevel: 40 }
+};
+
+function calculateAlertLevelForSeed(waterLevel, levels) {
+  const levelsBySeverity = [...levels].sort((a, b) => b.level - a.level);
+  const minThreshold = Math.min(...levels.map(level => level.minWaterLevel));
+  const maxThreshold = Math.max(...levels.map(level => level.maxWaterLevel));
+
+  for (const level of levelsBySeverity) {
+    if (waterLevel >= level.minWaterLevel && waterLevel <= level.maxWaterLevel) {
+      return level.level;
+    }
+  }
+
+  if (waterLevel < minThreshold) return levelsBySeverity[0].level;
+  if (waterLevel > maxThreshold) return levelsBySeverity[levelsBySeverity.length - 1].level;
+
+  return levelsBySeverity[levelsBySeverity.length - 1].level;
+}
+
 async function main() {
   console.log('🌱 Starting database seed...');
 
@@ -25,7 +49,16 @@ async function main() {
 
     // Seed Alert Levels
     console.log('📊 Seeding alert levels...');
-    for (const level of alertLevels) {
+    const normalizedAlertLevels = alertLevels.map((level) => {
+      const threshold = DEFAULT_ALERT_THRESHOLDS[level.level];
+      return {
+        ...level,
+        minWaterLevel: threshold ? threshold.minWaterLevel : level.minWaterLevel,
+        maxWaterLevel: threshold ? threshold.maxWaterLevel : level.maxWaterLevel
+      };
+    });
+
+    for (const level of normalizedAlertLevels) {
       await prisma.alertLevel.create({
         data: {
           level: level.level,
@@ -40,7 +73,7 @@ async function main() {
         }
       });
     }
-    console.log(`✅ Created ${alertLevels.length} alert levels`);
+    console.log(`✅ Created ${normalizedAlertLevels.length} alert levels`);
 
     // Seed Users (with hashed passwords)
     console.log('👥 Seeding users...');
@@ -85,13 +118,15 @@ async function main() {
     // Seed Water Monitoring
     console.log('💧 Seeding water monitoring data...');
     for (const reading of waterMonitoring) {
+      const computedAlertLevel = calculateAlertLevelForSeed(reading.waterLevel, normalizedAlertLevels);
+
       await prisma.waterMonitoring.create({
         data: {
           id: reading.id,
           timestamp: new Date(reading.timestamp),
           waterLevel: reading.waterLevel,
           waterLevelUnit: reading.waterLevelUnit,
-          alertLevel: reading.alertLevel,
+          alertLevel: computedAlertLevel,
           rainfallIndicator: reading.rainfallIndicator,
           deviceStatus: reading.deviceStatus,
           notes: reading.notes || ''

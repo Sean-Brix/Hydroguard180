@@ -118,6 +118,10 @@ async function recalculateAllWaterMonitoringAlertLevels() {
     console.log('Alert levels:', alertLevels.map(a => `Level ${a.level}: ${a.minWaterLevel}-${a.maxWaterLevel}cm`));
     console.log('Note: Thresholds configured for ultrasonic sensor (lower distance = higher danger)');
 
+    const levelsBySeverity = [...alertLevels].sort((a, b) => b.level - a.level);
+    const minThreshold = Math.min(...alertLevels.map(level => level.minWaterLevel));
+    const maxThreshold = Math.max(...alertLevels.map(level => level.maxWaterLevel));
+
     // Get all water monitoring records
     const allRecords = await prisma.waterMonitoring.findMany();
     console.log(`Found ${allRecords.length} water monitoring records to recalculate`);
@@ -126,14 +130,20 @@ async function recalculateAllWaterMonitoringAlertLevels() {
 
     // Recalculate and update each record
     for (const record of allRecords) {
-      let newAlertLevel = alertLevels[alertLevels.length - 1].level; // Default to highest (most dangerous)
+      let newAlertLevel = levelsBySeverity[levelsBySeverity.length - 1].level;
       
       // Find matching alert level based on distance
-      for (const level of alertLevels) {
+      for (const level of levelsBySeverity) {
         if (record.waterLevel >= level.minWaterLevel && record.waterLevel <= level.maxWaterLevel) {
           newAlertLevel = level.level;
           break;
         }
+      }
+
+      if (record.waterLevel < minThreshold) {
+        newAlertLevel = levelsBySeverity[0].level;
+      } else if (record.waterLevel > maxThreshold) {
+        newAlertLevel = levelsBySeverity[levelsBySeverity.length - 1].level;
       }
 
       // Always update to ensure consistency

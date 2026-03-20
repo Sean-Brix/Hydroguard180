@@ -10,8 +10,7 @@ import { Textarea } from '../components/ui/textarea';
 import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
 import maplibregl from 'maplibre-gl';
-import { inquiriesAPI } from '../utils/api';
-import { getSettings } from '../utils/database';
+import { inquiriesAPI, settingsAPI } from '../utils/api';
 
 // Barangay 180 coordinates
 const BRGY_LAT = 14.7633;
@@ -31,6 +30,7 @@ export function Contact() {
     subject: '',
     message: '',
   });
+  const [sysSettings, setSysSettings] = useState<any>(null);
 
   // Initialize map
   useEffect(() => {
@@ -88,8 +88,20 @@ export function Contact() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Pull contact numbers from centralized settings
-  const sysSettings = getSettings();
+  // Pull contact numbers from centralized backend settings
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const data = await settingsAPI.get();
+        setSysSettings(data);
+      } catch (error) {
+        console.error('Error loading settings:', error);
+      }
+    };
+
+    loadSettings();
+  }, []);
+
   const sysContact = (sysSettings as any).contact || {};
 
   const emergencyContacts = [

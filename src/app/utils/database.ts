@@ -235,10 +235,21 @@ export const getAlertLevelByLevel = (level: number) => alertLevels.find(a => a.l
 export const getCurrentAlertLevel = () => {
   const latest = getLatestWaterReading();
   if (!latest) return getAlertLevelByLevel(1);
-  
-  return alertLevels.find(
+
+  const levelsBySeverity = [...alertLevels].sort((a, b) => b.level - a.level);
+  const matchedLevel = levelsBySeverity.find(
     a => latest.waterLevel >= a.minWaterLevel && latest.waterLevel <= a.maxWaterLevel
-  ) || getAlertLevelByLevel(4);
+  );
+
+  if (matchedLevel) return matchedLevel;
+
+  const minThreshold = Math.min(...alertLevels.map(a => a.minWaterLevel));
+  const maxThreshold = Math.max(...alertLevels.map(a => a.maxWaterLevel));
+
+  if (latest.waterLevel < minThreshold) return getAlertLevelByLevel(levelsBySeverity[0].level);
+  if (latest.waterLevel > maxThreshold) return getAlertLevelByLevel(levelsBySeverity[levelsBySeverity.length - 1].level);
+
+  return getAlertLevelByLevel(1);
 };
 export const updateAlertLevel = (level: number, updates: any) => {
   const index = alertLevels.findIndex(a => a.level === level);

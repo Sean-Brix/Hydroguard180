@@ -1,5 +1,6 @@
 // API Configuration
 const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3000/api';
+export const TOKEN_EXPIRED_EVENT = 'hydroguard:token-expired';
 
 // Helper function to get auth token
 const getAuthToken = () => {
@@ -36,6 +37,13 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
     ...options,
     headers,
   });
+
+  if (response.status === 401) {
+    localStorage.removeItem('hydroguard_user');
+    localStorage.removeItem('hydroguard_token');
+    window.dispatchEvent(new CustomEvent(TOKEN_EXPIRED_EVENT));
+    throw new Error('Session expired. Please log in again.');
+  }
 
   return handleResponse(response);
 };

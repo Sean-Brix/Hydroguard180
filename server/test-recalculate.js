@@ -26,18 +26,28 @@ async function testRecalculation() {
     console.log('🔍 Checking each record:');
     console.log('━'.repeat(80));
 
+    const levelsBySeverity = [...alertLevels].sort((a, b) => b.level - a.level);
+    const minThreshold = Math.min(...alertLevels.map(level => level.minWaterLevel));
+    const maxThreshold = Math.max(...alertLevels.map(level => level.maxWaterLevel));
+
     let correctCount = 0;
     let incorrectCount = 0;
     const recordsToUpdate = [];
 
     for (const record of allRecords) {
-      let correctLevel = alertLevels[alertLevels.length - 1].level; // Default to highest
+      let correctLevel = levelsBySeverity[levelsBySeverity.length - 1].level;
       
-      for (const level of alertLevels) {
+      for (const level of levelsBySeverity) {
         if (record.waterLevel >= level.minWaterLevel && record.waterLevel <= level.maxWaterLevel) {
           correctLevel = level.level;
           break;
         }
+      }
+
+      if (record.waterLevel < minThreshold) {
+        correctLevel = levelsBySeverity[0].level;
+      } else if (record.waterLevel > maxThreshold) {
+        correctLevel = levelsBySeverity[levelsBySeverity.length - 1].level;
       }
 
       const isCorrect = record.alertLevel === correctLevel;

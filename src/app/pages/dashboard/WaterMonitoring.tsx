@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getAlertLevelByLevel, getAlertLevels } from '../../utils/database';
-import { waterMonitoringAPI } from '../../utils/api';
+import { waterMonitoringAPI, alertLevelsAPI } from '../../utils/api';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
@@ -14,6 +13,7 @@ import { useWaterMonitoringSSE } from '../../hooks/useWaterMonitoringSSE';
 
 export function WaterMonitoring() {
   const [readings, setReadings] = useState<any[]>([]);
+  const [alertLevels, setAlertLevels] = useState<any[]>([]);
   const [filteredReadings, setFilteredReadings] = useState<any[]>([]);
   const [filterLevel, setFilterLevel] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,12 +48,16 @@ export function WaterMonitoring() {
   const loadReadings = async () => {
     try {
       setLoading(true);
-      const response = await waterMonitoringAPI.getAll({ limit: 1000 });
+      const [response, levels] = await Promise.all([
+        waterMonitoringAPI.getAll({ limit: 1000 }),
+        alertLevelsAPI.getAll(),
+      ]);
       const data = response.data || [];
       const sorted = data.sort((a: any, b: any) => 
         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       );
       setReadings(sorted);
+      setAlertLevels(levels || []);
     } catch (error: any) {
       console.error('Failed to load readings:', error);
       toast.error(error.message || 'Failed to load water monitoring data');
@@ -61,6 +65,12 @@ export function WaterMonitoring() {
       setLoading(false);
     }
   };
+
+  const getAlertLevelByLevel = (level: number) => {
+    return alertLevels.find((a: any) => a.level === level);
+  };
+
+  const getAlertLevels = () => alertLevels;
 
   const applyFilters = () => {
     let filtered = [...readings];

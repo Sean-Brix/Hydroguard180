@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { residentsAPI } from '../../utils/api';
-import { exportToCSV } from '../../utils/database';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
@@ -11,6 +10,34 @@ import { Badge } from '../../components/ui/badge';
 import { toast } from 'sonner';
 import { UserPlus, Edit, Archive, Trash2, Search, Download, Users, UserCheck, ArchiveIcon } from 'lucide-react';
 import { ConfirmModal } from '../../components/ConfirmModal';
+
+const exportToCSV = (rows: any[], filename: string) => {
+  if (!rows.length) return;
+
+  const headers = Object.keys(rows[0]);
+  const csvRows = [
+    headers.join(','),
+    ...rows.map((row) =>
+      headers
+        .map((header) => {
+          const value = row[header] ?? '';
+          const escaped = String(value).replace(/"/g, '""');
+          return `"${escaped}"`;
+        })
+        .join(',')
+    ),
+  ];
+
+  const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+};
 
 type StatusFilter = 'all' | 'active' | 'archived';
 

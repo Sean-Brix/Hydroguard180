@@ -11,15 +11,29 @@ async function calculateAlertLevel(distance) {
     orderBy: { level: 'asc' }
   });
 
+  // Prioritize higher severity on boundary overlaps (Level 4 before Level 1).
+  const levelsBySeverity = [...alertLevels].sort((a, b) => b.level - a.level);
+
   // Find the matching alert level based on distance
-  for (const level of alertLevels) {
+  for (const level of levelsBySeverity) {
     if (distance >= level.minWaterLevel && distance <= level.maxWaterLevel) {
       return level.level;
     }
   }
 
-  // If distance is below all ranges (very close), return highest alert level (most dangerous)
-  return alertLevels[alertLevels.length - 1].level;
+  const minThreshold = Math.min(...alertLevels.map(level => level.minWaterLevel));
+  const maxThreshold = Math.max(...alertLevels.map(level => level.maxWaterLevel));
+
+  if (distance < minThreshold) {
+    return levelsBySeverity[0].level;
+  }
+
+  if (distance > maxThreshold) {
+    return levelsBySeverity[levelsBySeverity.length - 1].level;
+  }
+
+  // Fallback to safest level for any unexpected gaps in configuration.
+  return levelsBySeverity[levelsBySeverity.length - 1].level;
 }
 
 // Get all water monitoring records

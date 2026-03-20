@@ -39,34 +39,6 @@ export function AlertLevels() {
     }
   };
 
-  const getAffectedLevels = (level: number): string[] => {
-    const affected: string[] = [];
-    const current = editingThresholds[level];
-    const original = alertLevels.find(l => l.level === level);
-    
-    if (!original) return affected;
-
-    // Check if max changed and affects next level
-    if (level < 4 && current.max !== original.maxWaterLevel) {
-      const expectedNextMin = current.max + 1;
-      const nextLevel = editingThresholds[level + 1];
-      if (nextLevel.min !== expectedNextMin) {
-        affected.push(`Level ${level + 1} min → ${expectedNextMin} cm`);
-      }
-    }
-
-    // Check if min changed and affects previous level
-    if (level > 1 && current.min !== original.minWaterLevel) {
-      const expectedPrevMax = current.min - 1;
-      const prevLevel = editingThresholds[level - 1];
-      if (prevLevel.max !== expectedPrevMax) {
-        affected.push(`Level ${level - 1} max → ${expectedPrevMax} cm`);
-      }
-    }
-
-    return affected;
-  };
-
   const validateThresholds = (level: number): { valid: boolean; message?: string } => {
     const t = editingThresholds[level];
     
@@ -75,39 +47,12 @@ export function AlertLevels() {
       return { valid: false, message: 'Min level must be less than max level' };
     }
 
-    // Level 1 (Safe - farthest distance) max must always be 999 (infinity)
-    if (level === 1 && t.max !== 999) {
-      return { valid: false, message: 'Level 1 (Safe) must extend to infinity (999)' };
-    }
-
-    // Level 4 (Danger - closest distance) min must always be 0
-    if (level === 4 && t.min !== 0) {
-      return { valid: false, message: 'Level 4 (Danger) must start at 0' };
-    }
-
     return { valid: true };
   };
 
   const handleThresholdChange = (level: number, field: 'min' | 'max', value: number) => {
     const newThresholds = { ...editingThresholds };
     newThresholds[level] = { ...newThresholds[level], [field]: value };
-
-    // Auto-adjust adjacent levels to maintain continuity
-    if (field === 'max' && level < 4) {
-      // When max changes, adjust next level's min
-      newThresholds[level + 1] = {
-        ...newThresholds[level + 1],
-        min: value + 1
-      };
-    }
-
-    if (field === 'min' && level > 1) {
-      // When min changes, adjust previous level's max
-      newThresholds[level - 1] = {
-        ...newThresholds[level - 1],
-        max: value - 1
-      };
-    }
 
     setEditingThresholds(newThresholds);
   };
@@ -121,53 +66,11 @@ export function AlertLevels() {
 
     try {
       setLoading(true);
-      
-      // Collect all levels that need to be updated
-      const levelsToUpdate: Array<{ level: number; data: any }> = [];
-      
-      // Add the current level
+
       const t = editingThresholds[level];
-      levelsToUpdate.push({
-        level,
-        data: { minWaterLevel: t.min, maxWaterLevel: t.max }
-      });
+      await alertLevelsAPI.update(level, { minWaterLevel: t.min, maxWaterLevel: t.max });
 
-      // Check and add affected previous level
-      if (level > 1) {
-        const original = alertLevels.find(l => l.level === level);
-        if (original && t.min !== original.minWaterLevel) {
-          const prevT = editingThresholds[level - 1];
-          levelsToUpdate.push({
-            level: level - 1,
-            data: { minWaterLevel: prevT.min, maxWaterLevel: prevT.max }
-          });
-        }
-      }
-
-      // Check and add affected next level
-      if (level < 4) {
-        const original = alertLevels.find(l => l.level === level);
-        if (original && t.max !== original.maxWaterLevel) {
-          const nextT = editingThresholds[level + 1];
-          levelsToUpdate.push({
-            level: level + 1,
-            data: { minWaterLevel: nextT.min, maxWaterLevel: nextT.max }
-          });
-        }
-      }
-
-      // Update all affected levels
-      await Promise.all(
-        levelsToUpdate.map(({ level: lvl, data }) => 
-          alertLevelsAPI.update(lvl, data)
-        )
-      );
-
-      const message = levelsToUpdate.length > 1 
-        ? `Updated ${levelsToUpdate.length} alert levels and recalculated all water monitoring records`
-        : `Level ${level} thresholds updated and all water monitoring records recalculated`;
-      
-      toast.success(message);
+      toast.success(`Level ${level} thresholds updated`);
       setEditingLevelId(null);
       await loadData();
     } catch (error: any) {
@@ -245,9 +148,6 @@ export function AlertLevels() {
           {alertLevels.map((alert, i) => {
             const isActive = currentAlert?.level === alert.level;
             const isBeingEdited = editingLevelId === alert.level;
-            const willBeAffected = editingLevelId && getAffectedLevels(editingLevelId).some(msg => 
-              msg.includes(`Level ${alert.level}`)
-            );
 
             return (
               <div
@@ -255,13 +155,11 @@ export function AlertLevels() {
                 className={`bg-white rounded-xl shadow-sm overflow-hidden border transition-all flex flex-col ${
                   isActive ? 'ring-2 shadow-md' : 
                   isBeingEdited ? 'ring-2 ring-blue-300 shadow-md' :
-                  willBeAffected ? 'ring-2 ring-amber-300 shadow-md' :
                   'hover:shadow-md'
                 }`}
                 style={{
                   borderColor: isActive ? alert.color : 
                               isBeingEdited ? '#93c5fd' :
-                              willBeAffected ? '#fcd34d' :
                               '#e5e7eb',
                   ringColor: isActive ? alert.color : undefined,
                 }}
@@ -301,28 +199,13 @@ export function AlertLevels() {
                         Editing
                       </span>
                     )}
-                    {willBeAffected && (
-                      <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">
-                        Will adjust
-                      </span>
-                    )}
                   </div>
 
                   {/* Water range */}
                   <div className="flex items-center gap-1.5 text-xs bg-gray-50 rounded-lg px-2.5 py-1.5 mb-2">
                     <Droplets size={12} className="text-blue-400" />
                     <span className="text-gray-600">
-                      {willBeAffected ? (
-                        <>
-                          <span className="line-through opacity-50">
-                            {alert.minWaterLevel} – {alert.maxWaterLevel === 999 ? '∞' : alert.maxWaterLevel}
-                          </span>
-                          {' → '}
-                          <span className="font-semibold text-amber-700">
-                            {editingThresholds[alert.level]?.min} – {editingThresholds[alert.level]?.max === 999 ? '∞' : editingThresholds[alert.level]?.max}
-                          </span>
-                        </>
-                      ) : isBeingEdited ? (
+                      {isBeingEdited ? (
                         <span className="font-semibold text-blue-700">
                           {editingThresholds[alert.level]?.min} – {editingThresholds[alert.level]?.max === 999 ? '∞' : editingThresholds[alert.level]?.max}
                         </span>
@@ -370,9 +253,6 @@ export function AlertLevels() {
             {alertLevels.map((level) => {
               const isEditing = editingLevelId === level.level;
               const validation = isEditing ? validateThresholds(level.level) : { valid: true };
-              const affectedByEditing = editingLevelId ? getAffectedLevels(editingLevelId) : [];
-              const isAffected = affectedByEditing.some(msg => msg.includes(`Level ${level.level}`));
-              const affectedLevels = isEditing ? getAffectedLevels(level.level) : [];
               
               return (
                 <div key={level.level} className="px-4 py-3 space-y-2">
@@ -388,11 +268,6 @@ export function AlertLevels() {
                       <span className="text-xs font-medium text-[#1F2937]">
                         Level {level.level}: {level.name}
                       </span>
-                      {isAffected && !isEditing && (
-                        <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
-                          Will update
-                        </span>
-                      )}
                     </div>
                     {isEditing ? (
                       <div className="flex items-center gap-1">
@@ -451,15 +326,10 @@ export function AlertLevels() {
                             const newMin = parseInt(e.target.value) || 0;
                             handleThresholdChange(level.level, 'min', newMin);
                           }}
-                          disabled={level.level === 4}
-                          placeholder={level.level === 4 ? '0 (fixed)' : ''}
                         />
                       ) : (
                         <span className="h-7 flex items-center text-xs text-[#1F2937] px-2 bg-gray-50 rounded border border-gray-100 flex-1">
                           {editingThresholds[level.level]?.min ?? level.minWaterLevel}
-                          {isAffected && editingThresholds[level.level]?.min !== level.minWaterLevel && (
-                            <span className="ml-1.5 text-[9px] text-amber-600">(auto-adjusted)</span>
-                          )}
                         </span>
                       )}
                     </div>
@@ -467,30 +337,21 @@ export function AlertLevels() {
                     <div className="flex items-center gap-1.5 flex-1">
                       <label className="text-[10px] text-gray-400">Max</label>
                       {isEditing ? (
-                        level.level === 1 ? (
-                          <span className="h-7 flex items-center text-xs text-[#1F2937] px-2 bg-gray-50 rounded border border-gray-100 flex-1">
-                            ∞
-                          </span>
-                        ) : (
-                          <Input
-                            type="number"
-                            min="1"
-                            className={`h-7 text-xs ${
-                              !validation.valid ? 'border-red-300 focus:ring-red-500' : ''
-                            }`}
-                            value={editingThresholds[level.level]?.max ?? level.maxWaterLevel}
-                            onChange={(e) => {
-                              const newMax = parseInt(e.target.value) || 0;
-                              handleThresholdChange(level.level, 'max', newMax);
-                            }}
-                          />
-                        )
+                        <Input
+                          type="number"
+                          min="1"
+                          className={`h-7 text-xs ${
+                            !validation.valid ? 'border-red-300 focus:ring-red-500' : ''
+                          }`}
+                          value={editingThresholds[level.level]?.max ?? level.maxWaterLevel}
+                          onChange={(e) => {
+                            const newMax = parseInt(e.target.value) || 0;
+                            handleThresholdChange(level.level, 'max', newMax);
+                          }}
+                        />
                       ) : (
                         <span className="h-7 flex items-center text-xs text-[#1F2937] px-2 bg-gray-50 rounded border border-gray-100 flex-1">
                           {editingThresholds[level.level]?.max === 999 ? '∞' : (editingThresholds[level.level]?.max ?? level.maxWaterLevel)}
-                          {isAffected && editingThresholds[level.level]?.max !== level.maxWaterLevel && (
-                            <span className="ml-1.5 text-[9px] text-amber-600">(auto-adjusted)</span>
-                          )}
                         </span>
                       )}
                     </div>
@@ -509,25 +370,8 @@ export function AlertLevels() {
                       ) : (
                         <div className="bg-blue-50 border border-blue-100 rounded-md px-2 py-1.5 mt-1">
                           <p className="text-[10px] text-blue-700">
-                            {level.level === 1 && "Level 1 (Safe) always extends to infinity (far distance). Changing min will auto-adjust Level 2 max."}
-                            {level.level === 4 && "Level 4 (Danger) always starts at 0 (close distance). Changing max will auto-adjust Level 3 min."}
-                            {level.level > 1 && level.level < 4 && (
-                              "Changes will auto-adjust adjacent levels to maintain continuity (no gaps/overlaps)."
-                            )}
+                            Changes only apply to this level. Other levels stay unchanged unless you edit them separately.
                           </p>
-                        </div>
-                      )}
-                      
-                      {affectedLevels.length > 0 && validation.valid && (
-                        <div className="bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 mt-1">
-                          <p className="text-[10px] text-amber-800 font-medium mb-0.5">
-                            📝 Adjacent levels will be adjusted:
-                          </p>
-                          <ul className="text-[10px] text-amber-700 space-y-0.5 ml-3">
-                            {affectedLevels.map((msg, idx) => (
-                              <li key={idx}>• {msg}</li>
-                            ))}
-                          </ul>
                         </div>
                       )}
                     </>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AlertTriangle, X, Volume2, VolumeX } from 'lucide-react';
-import { getCurrentAlertLevel } from '../utils/database';
+import { alertLevelsAPI } from '../utils/api';
 import { toast } from 'sonner';
 
 export function AlertSystem() {
@@ -11,23 +11,33 @@ export function AlertSystem() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
+    const fetchCurrentAlertLevel = async () => {
+      try {
+        const current = await alertLevelsAPI.getCurrent();
+        // Only trigger for Warning (3) or Danger (4)
+        if (current && current.level >= 3) {
+          if (alertLevel?.level !== current.level) {
+            setAlertLevel(current);
+            setAcknowledged(false);
+            // Play sound if enabled
+            if (audioEnabled && audioRef.current) {
+              audioRef.current.play().catch(e => console.log('Audio play failed:', e));
+            }
+          }
+        } else {
+          setAlertLevel(null);
+        }
+      } catch (error) {
+        console.error('Failed to fetch current alert level:', error);
+      }
+    };
+
     // Check alert level every 5 seconds
     const interval = setInterval(() => {
-      const current = getCurrentAlertLevel();
-      // Only trigger for Warning (3) or Danger (4)
-      if (current && current.level >= 3) {
-        if (alertLevel?.level !== current.level) {
-          setAlertLevel(current);
-          setAcknowledged(false);
-          // Play sound if enabled
-          if (audioEnabled && audioRef.current) {
-            audioRef.current.play().catch(e => console.log('Audio play failed:', e));
-          }
-        }
-      } else {
-        setAlertLevel(null);
-      }
+      fetchCurrentAlertLevel();
     }, 5000);
+
+    fetchCurrentAlertLevel();
 
     return () => clearInterval(interval);
   }, [alertLevel, audioEnabled]);
