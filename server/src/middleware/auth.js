@@ -1,6 +1,14 @@
 const jwt = require('jsonwebtoken');
 const prisma = require('../db');
 
+const AUTH_USER_SELECT = {
+  id: true,
+  email: true,
+  fullName: true,
+  role: true,
+  status: true,
+};
+
 // Verify JWT token
 exports.authenticate = async (req, res, next) => {
   try {
@@ -18,7 +26,8 @@ exports.authenticate = async (req, res, next) => {
 
     // Get user from database
     const user = await prisma.user.findUnique({
-      where: { id: decoded.userId }
+      where: { id: decoded.userId },
+      select: AUTH_USER_SELECT,
     });
 
     if (!user) {
@@ -74,7 +83,8 @@ exports.optionalAuth = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const user = await prisma.user.findUnique({
-      where: { id: decoded.userId }
+      where: { id: decoded.userId },
+      select: AUTH_USER_SELECT,
     });
 
     if (user && user.status === 'active') {

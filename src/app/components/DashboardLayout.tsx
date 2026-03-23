@@ -11,6 +11,7 @@ import {
   HelpCircle,
   MessageSquareText,
   MoreHorizontal,
+  UserCog,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { AlertSystem } from './AlertSystem';
@@ -61,6 +62,7 @@ export function DashboardLayout() {
     { path: '/dashboard/faq-management', label: 'FAQ Management', icon: HelpCircle },
     { path: '/dashboard/alerts', label: 'Alert Levels', icon: AlertTriangle },
     { path: '/dashboard/inquiries', label: 'Inquiries', icon: MessageSquareText },
+    { path: '/dashboard/profile', label: 'Profile', icon: UserCog },
   ];
 
   const isActive = (path: string) => location.pathname === path;

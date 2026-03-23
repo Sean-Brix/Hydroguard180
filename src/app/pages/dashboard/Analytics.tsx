@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { waterMonitoringAPI, alertLevelsAPI } from '../../utils/api';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
@@ -6,128 +6,156 @@ import { BarChart3, TrendingUp, Droplets, AlertTriangle, Info, X } from 'lucide-
 import { AnimatePresence, motion } from 'motion/react';
 import { useWaterMonitoringSSE } from '../../hooks/useWaterMonitoringSSE';
 
+type AnalyticsStats = {
+  totalRecords: number;
+  averageWaterLevel: number;
+  highestLevel: number;
+  mostFrequentAlert: number;
+  level1Count: number;
+  level2Count: number;
+  level3Count: number;
+  level4Count: number;
+};
+
+const EMPTY_STATS: AnalyticsStats = {
+  totalRecords: 0,
+  averageWaterLevel: 0,
+  highestLevel: 0,
+  mostFrequentAlert: 1,
+  level1Count: 0,
+  level2Count: 0,
+  level3Count: 0,
+  level4Count: 0,
+};
+
 export function Analytics() {
-  const [readings, setReadings] = useState<any[]>([]);
-  const [allReadings, setAllReadings] = useState<any[]>([]);
   const [alertLevels, setAlertLevels] = useState<any[]>([]);
   const [dateRange, setDateRange] = useState({
     start: '',
     end: '',
   });
-  const [stats, setStats] = useState({
-    totalRecords: 0,
-    averageWaterLevel: 0,
-    highestLevel: 0,
-    mostFrequentAlert: 0,
-    level1Count: 0,
-    level2Count: 0,
-    level3Count: 0,
-    level4Count: 0,
-  });
+  const [stats, setStats] = useState<AnalyticsStats>(EMPTY_STATS);
   const [showInsights, setShowInsights] = useState(false);
 
-  useEffect(() => {
-    loadData();
+  const applyStats = useCallback((data: any) => {
+    const alertDistribution = data?.alertDistribution || {};
+    const levelCounts = {
+      1: alertDistribution[1] || 0,
+      2: alertDistribution[2] || 0,
+      3: alertDistribution[3] || 0,
+      4: alertDistribution[4] || 0,
+    };
+
+    const mostFrequentAlert = Object.entries(levelCounts).reduce(
+      (current, next) => Number(current[1]) >= Number(next[1]) ? current : next,
+      ['1', levelCounts[1]] as [string, number],
+    )[0];
+
+    setStats({
+      totalRecords: data?.totalReadings || 0,
+      averageWaterLevel: Number((data?.averageWaterLevel || 0).toFixed(2)),
+      highestLevel: data?.maxWaterLevel || 0,
+      mostFrequentAlert: Number.parseInt(mostFrequentAlert, 10),
+      level1Count: levelCounts[1],
+      level2Count: levelCounts[2],
+      level3Count: levelCounts[3],
+      level4Count: levelCounts[4],
+    });
   }, []);
 
-  // Real-time SSE updates
-  const handleWaterMonitoringUpdate = useCallback((newRecord: any) => {
-    console.log('🌊 Analytics real-time update:', newRecord);
-    
-    setAllReadings(prev => {
-      const updated = [newRecord, ...prev];
-      // If no date filter is applied, update readings too
-      if (!dateRange.start && !dateRange.end) {
-        setReadings(updated);
-        calculateStats(updated);
-      }
-      return updated;
-    });
-  }, [dateRange]);
-
-  const { isConnected } = useWaterMonitoringSSE(handleWaterMonitoringUpdate);
-
-  const loadData = async () => {
+  const loadStats = useCallback(async (params?: { startDate?: string; endDate?: string }) => {
     try {
-      const [readingsResponse, levelsData] = await Promise.all([
-        waterMonitoringAPI.getAll({ limit: 10000 }),
-        alertLevelsAPI.getAll(),
-      ]);
-      const readingsData = readingsResponse.data || [];
-      setAllReadings(readingsData);
-      setReadings(readingsData);
-      setAlertLevels(levelsData);
-      calculateStats(readingsData);
+      const statsData = await waterMonitoringAPI.getStats(params);
+      applyStats(statsData);
     } catch (error) {
-      console.error('Error loading analytics data:', error);
+      console.error('Error loading analytics stats:', error);
+      setStats(EMPTY_STATS);
     }
-  };
+  }, [applyStats]);
 
-  const calculateStats = (data: any[]) => {
-    if (data.length === 0) {
-      setStats({
-        totalRecords: 0,
-        averageWaterLevel: 0,
-        highestLevel: 0,
-        mostFrequentAlert: 1,
-        level1Count: 0,
-        level2Count: 0,
-        level3Count: 0,
-        level4Count: 0,
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [statsData, levelsData] = await Promise.all([
+          waterMonitoringAPI.getStats(),
+          alertLevelsAPI.getAll(),
+        ]);
+
+        setAlertLevels(levelsData);
+        applyStats(statsData);
+      } catch (error) {
+        console.error('Error loading analytics data:', error);
+      }
+    };
+
+    loadData();
+  }, [applyStats]);
+
+  const handleWaterMonitoringUpdate = useCallback((newRecord: any) => {
+    console.log('Analytics real-time update:', newRecord);
+
+    if (dateRange.start || dateRange.end) {
+      void loadStats({
+        startDate: dateRange.start || undefined,
+        endDate: dateRange.end || undefined,
       });
       return;
     }
 
-    const totalRecords = data.length;
-    const averageWaterLevel = data.reduce((sum, r) => sum + r.waterLevel, 0) / data.length;
-    const highestLevel = Math.max(...data.map(r => r.waterLevel));
+    setStats((previous) => {
+      const totalRecords = previous.totalRecords + 1;
+      const nextCounts = {
+        1: previous.level1Count,
+        2: previous.level2Count,
+        3: previous.level3Count,
+        4: previous.level4Count,
+      };
 
-    const alertCounts = {
-      1: data.filter(r => r.alertLevel === 1).length,
-      2: data.filter(r => r.alertLevel === 2).length,
-      3: data.filter(r => r.alertLevel === 3).length,
-      4: data.filter(r => r.alertLevel === 4).length,
-    };
+      if (nextCounts[newRecord.alertLevel as keyof typeof nextCounts] !== undefined) {
+        nextCounts[newRecord.alertLevel as keyof typeof nextCounts] += 1;
+      }
 
-    const mostFrequentAlert = Object.entries(alertCounts).reduce((a, b) => 
-      alertCounts[a[0]] > alertCounts[b[0]] ? a : b
-    )[0];
+      const mostFrequentAlert = Object.entries(nextCounts).reduce(
+        (current, next) => Number(current[1]) >= Number(next[1]) ? current : next,
+        ['1', nextCounts[1]] as [string, number],
+      )[0];
 
-    setStats({
-      totalRecords,
-      averageWaterLevel: parseFloat(averageWaterLevel.toFixed(2)),
-      highestLevel,
-      mostFrequentAlert: parseInt(mostFrequentAlert),
-      level1Count: alertCounts[1],
-      level2Count: alertCounts[2],
-      level3Count: alertCounts[3],
-      level4Count: alertCounts[4],
+      const averageWaterLevel =
+        totalRecords === 0
+          ? 0
+          : ((previous.averageWaterLevel * previous.totalRecords) + newRecord.waterLevel) / totalRecords;
+
+      return {
+        totalRecords,
+        averageWaterLevel: Number(averageWaterLevel.toFixed(2)),
+        highestLevel: Math.max(previous.highestLevel, newRecord.waterLevel),
+        mostFrequentAlert: Number.parseInt(mostFrequentAlert, 10),
+        level1Count: nextCounts[1],
+        level2Count: nextCounts[2],
+        level3Count: nextCounts[3],
+        level4Count: nextCounts[4],
+      };
     });
-  };
+  }, [dateRange.end, dateRange.start, loadStats]);
+
+  useWaterMonitoringSSE(handleWaterMonitoringUpdate);
 
   const handleFilterByDateRange = () => {
     if (!dateRange.start || !dateRange.end) {
-      setReadings(allReadings);
-      calculateStats(allReadings);
+      void loadStats();
       return;
     }
 
-    const filtered = allReadings.filter(r => {
-      const timestamp = new Date(r.timestamp);
-      const start = new Date(dateRange.start);
-      const end = new Date(dateRange.end);
-      return timestamp >= start && timestamp <= end;
+    void loadStats({
+      startDate: dateRange.start,
+      endDate: dateRange.end,
     });
-
-    setReadings(filtered);
-    calculateStats(filtered);
   };
 
-  const mostFrequentAlertInfo = alertLevels.find(a => a.level === stats.mostFrequentAlert);
+  const mostFrequentAlertInfo = alertLevels.find((alertLevel) => alertLevel.level === stats.mostFrequentAlert);
 
   return (
     <div className="flex flex-col h-full min-h-0 gap-4">
-      {/* Date Range Filter - compact row */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-100 px-4 py-3 flex-shrink-0">
         <div className="flex flex-wrap items-end gap-3">
           <div className="flex items-center gap-2 flex-1 min-w-[200px]">
@@ -136,7 +164,7 @@ export function Analytics() {
               type="date"
               className="h-8 text-sm"
               value={dateRange.start}
-              onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+              onChange={(event) => setDateRange({ ...dateRange, start: event.target.value })}
             />
           </div>
           <div className="flex items-center gap-2 flex-1 min-w-[200px]">
@@ -145,18 +173,22 @@ export function Analytics() {
               type="date"
               className="h-8 text-sm"
               value={dateRange.end}
-              onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+              onChange={(event) => setDateRange({ ...dateRange, end: event.target.value })}
             />
           </div>
           <div className="flex gap-2">
             <Button onClick={handleFilterByDateRange} size="sm" className="h-8 bg-[#2563EB] hover:bg-[#1D4ED8] text-xs">
               Apply
             </Button>
-            <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => {
-              setDateRange({ start: '', end: '' });
-              setReadings(allReadings);
-              calculateStats(allReadings);
-            }}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs"
+              onClick={() => {
+                setDateRange({ start: '', end: '' });
+                void loadStats();
+              }}
+            >
               Reset
             </Button>
             <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setShowInsights(true)}>
@@ -167,7 +199,6 @@ export function Analytics() {
         </div>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 flex-shrink-0">
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-3">
           <div className="flex items-center gap-2.5">
@@ -188,7 +219,10 @@ export function Analytics() {
             </div>
             <div className="min-w-0">
               <p className="text-[11px] text-gray-500">Avg Level</p>
-              <p className="text-xl font-bold text-[#1F2937]">{stats.averageWaterLevel}<span className="text-xs text-gray-400 ml-0.5">cm</span></p>
+              <p className="text-xl font-bold text-[#1F2937]">
+                {stats.averageWaterLevel}
+                <span className="text-xs text-gray-400 ml-0.5">cm</span>
+              </p>
             </div>
           </div>
         </div>
@@ -200,7 +234,10 @@ export function Analytics() {
             </div>
             <div className="min-w-0">
               <p className="text-[11px] text-gray-500">Highest</p>
-              <p className="text-xl font-bold text-[#1F2937]">{stats.highestLevel}<span className="text-xs text-gray-400 ml-0.5">cm</span></p>
+              <p className="text-xl font-bold text-[#1F2937]">
+                {stats.highestLevel}
+                <span className="text-xs text-gray-400 ml-0.5">cm</span>
+              </p>
             </div>
           </div>
         </div>
@@ -218,21 +255,22 @@ export function Analytics() {
         </div>
       </div>
 
-      {/* Alert Level Distribution + Recommended Actions — side by side, fills remaining space */}
       <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-5 gap-4">
-        {/* Distribution */}
         <div className="lg:col-span-3 bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex flex-col min-h-0">
           <h3 className="text-sm font-bold text-[#1F2937] mb-3 flex-shrink-0">Alert Level Distribution</h3>
           <div className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
             {alertLevels.map((alertInfo: any) => {
-              const countKey = `level${alertInfo.level}Count` as keyof typeof stats;
+              const countKey = `level${alertInfo.level}Count` as keyof AnalyticsStats;
               const count = stats[countKey] as number;
               const pct = ((count / stats.totalRecords) * 100 || 0);
+
               return (
                 <div key={alertInfo.level}>
                   <div className="flex justify-between items-center mb-1.5">
-                    <span className="text-xs font-medium text-gray-700">Level {alertInfo.level} — {alertInfo.name}</span>
-                    <span className="text-xs font-semibold text-gray-900">{count} <span className="text-gray-400 font-normal">({pct.toFixed(1)}%)</span></span>
+                    <span className="text-xs font-medium text-gray-700">Level {alertInfo.level} â€” {alertInfo.name}</span>
+                    <span className="text-xs font-semibold text-gray-900">
+                      {count} <span className="text-gray-400 font-normal">({pct.toFixed(1)}%)</span>
+                    </span>
                   </div>
                   <div className="w-full bg-gray-100 rounded-full h-2.5">
                     <div
@@ -246,31 +284,30 @@ export function Analytics() {
           </div>
         </div>
 
-        {/* Recommended Actions */}
         <div className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex flex-col min-h-0">
           <h3 className="text-sm font-bold text-[#1F2937] mb-3 flex-shrink-0">Recommendations</h3>
           <div className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
             <div className="border-l-3 border-[#22C55E] pl-3">
               <h4 className="text-xs font-semibold text-[#1F2937] mb-1">Current Trend</h4>
               <p className="text-xs text-gray-600">
-                {stats.mostFrequentAlert === 1 
+                {stats.mostFrequentAlert === 1
                   ? 'Water levels are predominantly normal. Continue regular monitoring.'
                   : stats.mostFrequentAlert === 2
-                  ? 'Water levels show advisory status. Maintain increased vigilance.'
-                  : stats.mostFrequentAlert === 3
-                  ? 'Warning levels detected frequently. Prepare for potential evacuation.'
-                  : 'Critical levels recorded. Immediate action required.'}
+                    ? 'Water levels show advisory status. Maintain increased vigilance.'
+                    : stats.mostFrequentAlert === 3
+                      ? 'Warning levels detected frequently. Prepare for potential evacuation.'
+                      : 'Critical levels recorded. Immediate action required.'}
               </p>
             </div>
             <div className="border-l-3 border-[#FF6A00] pl-3">
               <h4 className="text-xs font-semibold text-[#1F2937] mb-1">Peak Monitoring</h4>
               <p className="text-xs text-gray-600">
-                Highest recorded: {stats.highestLevel} cm. 
-                {stats.highestLevel > 100 
-                  ? ' Exceeded critical threshold — review emergency response.'
+                Highest recorded: {stats.highestLevel} cm.
+                {stats.highestLevel > 100
+                  ? ' Exceeded critical threshold â€” review emergency response.'
                   : stats.highestLevel > 80
-                  ? ' Reached warning level — ensure preparedness protocols.'
-                  : ' Levels remain manageable with current protocols.'}
+                    ? ' Reached warning level â€” ensure preparedness protocols.'
+                    : ' Levels remain manageable with current protocols.'}
               </p>
             </div>
             <div className="border-l-3 border-[#2563EB] pl-3">
@@ -283,7 +320,6 @@ export function Analytics() {
         </div>
       </div>
 
-      {/* Insights Modal */}
       <AnimatePresence>
         {showInsights && (
           <>

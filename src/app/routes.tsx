@@ -1,22 +1,43 @@
+import { lazy, Suspense, type ComponentType, type LazyExoticComponent, type ReactNode } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router';
 import { PublicLayout } from './components/PublicLayout';
 import { DashboardLayout } from './components/DashboardLayout';
-import { Home } from './pages/Home';
-import { About } from './pages/About';
-import { FAQ } from './pages/FAQ';
-import { Training } from './pages/Training';
-import { Contact } from './pages/Contact';
-import { Login } from './pages/Login';
-import { UserManagement } from './pages/dashboard/UserManagement';
-import { ResidentDirectory } from './pages/dashboard/ResidentDirectory';
-import { WaterMonitoring } from './pages/dashboard/WaterMonitoring';
-import { AlertLevels } from './pages/dashboard/AlertLevels';
-import { Analytics } from './pages/dashboard/Analytics';
-import { FAQManagement } from './pages/dashboard/FAQManagement';
-import { Inquiries } from './pages/dashboard/Inquiries';
 import { useAuth, type UserRole } from './context/AuthContext';
 import { AuthProvider } from './context/AuthContext';
 import { Outlet } from 'react-router';
+
+type RouteComponent = LazyExoticComponent<ComponentType<object>>;
+
+const HomePage = lazy(() => import('./pages/Home').then((module) => ({ default: module.Home })));
+const AboutPage = lazy(() => import('./pages/About').then((module) => ({ default: module.About })));
+const FAQPage = lazy(() => import('./pages/FAQ').then((module) => ({ default: module.FAQ })));
+const TrainingPage = lazy(() => import('./pages/Training').then((module) => ({ default: module.Training })));
+const ContactPage = lazy(() => import('./pages/Contact').then((module) => ({ default: module.Contact })));
+const LoginPage = lazy(() => import('./pages/Login').then((module) => ({ default: module.Login })));
+const AnalyticsPage = lazy(() => import('./pages/dashboard/Analytics').then((module) => ({ default: module.Analytics })));
+const WaterMonitoringPage = lazy(() => import('./pages/dashboard/WaterMonitoring').then((module) => ({ default: module.WaterMonitoring })));
+const ResidentDirectoryPage = lazy(() => import('./pages/dashboard/ResidentDirectory').then((module) => ({ default: module.ResidentDirectory })));
+const FAQManagementPage = lazy(() => import('./pages/dashboard/FAQManagement').then((module) => ({ default: module.FAQManagement })));
+const AlertLevelsPage = lazy(() => import('./pages/dashboard/AlertLevels').then((module) => ({ default: module.AlertLevels })));
+const InquiriesPage = lazy(() => import('./pages/dashboard/Inquiries').then((module) => ({ default: module.Inquiries })));
+const ProfilePage = lazy(() => import('./pages/dashboard/Profile').then((module) => ({ default: module.Profile })));
+const UserManagementPage = lazy(() => import('./pages/dashboard/UserManagement').then((module) => ({ default: module.UserManagement })));
+
+function RouteLoadingFallback() {
+  return (
+    <div className="min-h-[40vh] flex items-center justify-center bg-white text-sm text-gray-500">
+      Loading...
+    </div>
+  );
+}
+
+function LazyRoute({ component: Component }: { component: RouteComponent }) {
+  return (
+    <Suspense fallback={<RouteLoadingFallback />}>
+      <Component />
+    </Suspense>
+  );
+}
 
 // Root layout that provides AuthContext to entire app
 function RootLayout() {
@@ -28,7 +49,7 @@ function RootLayout() {
 }
 
 // Protected Route - requires authentication
-function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: UserRole[] }) {
+function ProtectedRoute({ children, allowedRoles }: { children: ReactNode; allowedRoles?: UserRole[] }) {
   const { isAuthenticated, user } = useAuth();
 
   if (!isAuthenticated || !user) {
@@ -50,7 +71,7 @@ function LoginGuard() {
     return <Navigate to="/dashboard" replace />;
   }
 
-  return <Login />;
+  return <LazyRoute component={LoginPage} />;
 }
 
 export const router = createBrowserRouter([
@@ -62,11 +83,11 @@ export const router = createBrowserRouter([
         path: '/',
         Component: PublicLayout,
         children: [
-          { index: true, Component: Home },
-          { path: 'about', Component: About },
-          { path: 'faq', Component: FAQ },
-          { path: 'training', Component: Training },
-          { path: 'contact', Component: Contact },
+          { index: true, element: <LazyRoute component={HomePage} /> },
+          { path: 'about', element: <LazyRoute component={AboutPage} /> },
+          { path: 'faq', element: <LazyRoute component={FAQPage} /> },
+          { path: 'training', element: <LazyRoute component={TrainingPage} /> },
+          { path: 'contact', element: <LazyRoute component={ContactPage} /> },
         ],
       },
       {
@@ -81,17 +102,18 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         ),
         children: [
-          { index: true, Component: Analytics },
-          { path: 'monitoring', Component: WaterMonitoring },
-          { path: 'residents', Component: ResidentDirectory },
-          { path: 'faq-management', Component: FAQManagement },
-          { path: 'alerts', Component: AlertLevels },
-          { path: 'inquiries', Component: Inquiries },
+          { index: true, element: <LazyRoute component={AnalyticsPage} /> },
+          { path: 'monitoring', element: <LazyRoute component={WaterMonitoringPage} /> },
+          { path: 'residents', element: <LazyRoute component={ResidentDirectoryPage} /> },
+          { path: 'faq-management', element: <LazyRoute component={FAQManagementPage} /> },
+          { path: 'alerts', element: <LazyRoute component={AlertLevelsPage} /> },
+          { path: 'inquiries', element: <LazyRoute component={InquiriesPage} /> },
+          { path: 'profile', element: <LazyRoute component={ProfilePage} /> },
           {
             path: 'users',
             element: (
               <ProtectedRoute allowedRoles={['Super Admin', 'Admin']}>
-                <UserManagement />
+                <LazyRoute component={UserManagementPage} />
               </ProtectedRoute>
             ),
           },

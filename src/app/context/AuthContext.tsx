@@ -4,7 +4,7 @@ import { TOKEN_EXPIRED_EVENT } from '../utils/api';
 
 export type UserRole = 'Super Admin' | 'Admin' | 'Staff';
 
-interface User {
+export interface User {
   id: string;
   username: string;
   email: string;
@@ -17,6 +17,7 @@ interface AuthContextType {
   user: User | null;
   login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
+  updateSessionUser: (partialUser: Partial<User>) => void;
   isAuthenticated: boolean;
   hasRole: (...roles: UserRole[]) => boolean;
 }
@@ -88,13 +89,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const updateSessionUser = (partialUser: Partial<User>) => {
+    if (!user) return;
+    const mergedUser = { ...user, ...partialUser };
+    setUser(mergedUser);
+    localStorage.setItem('hydroguard_user', JSON.stringify(mergedUser));
+  };
+
   const hasRole = (...roles: UserRole[]) => {
     if (!user) return false;
     return roles.includes(user.role);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, hasRole }}>
+    <AuthContext.Provider value={{ user, login, logout, updateSessionUser, isAuthenticated: !!user, hasRole }}>
       {children}
     </AuthContext.Provider>
   );

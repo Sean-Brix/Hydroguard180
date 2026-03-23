@@ -63,6 +63,20 @@ export const authAPI = {
     return fetchWithAuth('/auth/me');
   },
 
+  updateProfile: async (data: { username: string; email: string; fullName: string }) => {
+    return fetchWithAuth('/auth/me', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  changePassword: async (data: { currentPassword: string; newPassword: string }) => {
+    return fetchWithAuth('/auth/change-password', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
   logout: async () => {
     return fetchWithAuth('/auth/logout', { method: 'POST' });
   },
@@ -182,8 +196,19 @@ export const waterMonitoringAPI = {
     return handleResponse(response);
   },
 
-  getStats: async (days = 7) => {
-    const response = await fetch(`${API_BASE_URL}/water-monitoring/stats?days=${days}`);
+  getStats: async (params?: number | { days?: number; startDate?: string; endDate?: string }) => {
+    const queryParams = new URLSearchParams();
+
+    if (typeof params === 'number') {
+      queryParams.append('days', params.toString());
+    } else if (params) {
+      if (params.days !== undefined) queryParams.append('days', params.days.toString());
+      if (params.startDate) queryParams.append('startDate', params.startDate);
+      if (params.endDate) queryParams.append('endDate', params.endDate);
+    }
+
+    const query = queryParams.toString();
+    const response = await fetch(`${API_BASE_URL}/water-monitoring/stats${query ? `?${query}` : ''}`);
     return handleResponse(response);
   },
 

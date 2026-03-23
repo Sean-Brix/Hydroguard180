@@ -112,3 +112,116 @@ exports.logout = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+// Update current user's profile
+exports.updateProfile = async (req, res) => {
+  try {
+    const { username, email, fullName } = req.body;
+
+    const normalizedUsername = String(username).trim();
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const normalizedFullName = String(fullName).trim();
+
+    if (!normalizedUsername || !normalizedEmail || !normalizedFullName) {
+      return res.status(400).json({ error: 'Username, email, and full name are required' });
+    }
+
+    const conflictingUser = await prisma.user.findFirst({
+      where: {
+        id: { not: req.userId },
+        OR: [
+          { username: normalizedUsername },
+          { email: normalizedEmail }
+        ]
+      }
+    });
+
+    if (conflictingUser) {
+      return res.status(400).json({ error: 'Username or email already exists' });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: req.userId },
+      data: {
+        username: normalizedUsername,
+        email: normalizedEmail,
+        fullName: normalizedFullName
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        fullName: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: req.userId,
+        userName: updatedUser.fullName,
+        action: 'Profile Updated',
+        target: updatedUser.email,
+        details: 'User updated account details'
+      }
+    });
+
+    res.json(updatedUser);
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Change current user's password
+exports.changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current password and new password are required' });
+    }
+
+    if (String(newPassword).length < 8) {
+      return res.status(400).json({ error: 'New password must be at least 8 characters long' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isCurrentPasswordValid) {
+      return res.status(400).json({ error: 'Current password is incorrect' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: req.userId },
+      data: { password: hashedPassword }
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: req.userId,
+        userName: user.fullName,
+        action: 'Password Changed',
+        target: user.email,
+        details: 'User changed account password'
+      }
+    });
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};

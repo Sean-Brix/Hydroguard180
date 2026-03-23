@@ -1,46 +1,86 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AlertTriangle, X, Volume2, VolumeX } from 'lucide-react';
 import { alertLevelsAPI } from '../utils/api';
+import { useWaterMonitoringSSE } from '../hooks/useWaterMonitoringSSE';
 import { toast } from 'sonner';
+
+const ALERT_SYNC_INTERVAL_MS = 60_000;
 
 export function AlertSystem() {
   const [alertLevel, setAlertLevel] = useState<any>(null);
   const [acknowledged, setAcknowledged] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const alertLevelRef = useRef<any>(null);
+  const alertDefinitionsRef = useRef<any[]>([]);
+  const audioEnabledRef = useRef(false);
 
   useEffect(() => {
-    const fetchCurrentAlertLevel = async () => {
+    alertLevelRef.current = alertLevel;
+  }, [alertLevel]);
+
+  useEffect(() => {
+    audioEnabledRef.current = audioEnabled;
+  }, [audioEnabled]);
+
+  const playAlertTone = () => {
+    if (audioEnabledRef.current && audioRef.current) {
+      audioRef.current.play().catch((error) => console.log('Audio play failed:', error));
+    }
+  };
+
+  const applyAlertLevel = (nextAlert: any | null) => {
+    if (!nextAlert || nextAlert.level < 3) {
+      setAlertLevel(null);
+      return;
+    }
+
+    if (alertLevelRef.current?.level !== nextAlert.level) {
+      setAlertLevel(nextAlert);
+      setAcknowledged(false);
+      playAlertTone();
+      return;
+    }
+
+    setAlertLevel((previous: any) => previous ? { ...previous, ...nextAlert } : nextAlert);
+  };
+
+  useEffect(() => {
+    const syncCurrentAlert = async () => {
       try {
-        const current = await alertLevelsAPI.getCurrent();
-        // Only trigger for Warning (3) or Danger (4)
-        if (current && current.level >= 3) {
-          if (alertLevel?.level !== current.level) {
-            setAlertLevel(current);
-            setAcknowledged(false);
-            // Play sound if enabled
-            if (audioEnabled && audioRef.current) {
-              audioRef.current.play().catch(e => console.log('Audio play failed:', e));
-            }
-          }
-        } else {
+        const [levels, current] = await Promise.all([
+          alertLevelsAPI.getAll(),
+          alertLevelsAPI.getCurrent().catch(() => null),
+        ]);
+
+        alertDefinitionsRef.current = levels;
+
+        if (!current) {
           setAlertLevel(null);
+          return;
         }
+
+        const resolvedAlert = levels.find((level: any) => level.level === current.level) || current;
+        applyAlertLevel(resolvedAlert);
       } catch (error) {
-        console.error('Failed to fetch current alert level:', error);
+        console.error('Failed to synchronize current alert level:', error);
       }
     };
 
-    // Check alert level every 5 seconds
-    const interval = setInterval(() => {
-      fetchCurrentAlertLevel();
-    }, 5000);
-
-    fetchCurrentAlertLevel();
+    syncCurrentAlert();
+    const interval = setInterval(syncCurrentAlert, ALERT_SYNC_INTERVAL_MS);
 
     return () => clearInterval(interval);
-  }, [alertLevel, audioEnabled]);
+  }, []);
+
+  useWaterMonitoringSSE((newRecord) => {
+    const resolvedAlert = alertDefinitionsRef.current.find(
+      (level: any) => level.level === newRecord.alertLevel,
+    ) || null;
+
+    applyAlertLevel(resolvedAlert);
+  });
 
   const handleAcknowledge = () => {
     setAcknowledged(true);
@@ -87,7 +127,7 @@ export function AlertSystem() {
                   <p className="font-medium text-gray-700">Level {alertLevel.level}: {alertLevel.name}</p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={handleAcknowledge}
                 className="text-gray-500 hover:text-gray-700 transition-colors"
               >
@@ -95,16 +135,16 @@ export function AlertSystem() {
               </button>
             </div>
           </div>
-          
+
           <div className="p-6">
             <p className="text-lg text-gray-800 mb-6 leading-relaxed">
               {alertLevel.description}
             </p>
-            
+
             <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 mb-6">
               <h3 className="font-semibold text-gray-900 mb-2">Required Action:</h3>
               <p className="text-gray-700 font-medium">
-                {alertLevel.protocols?.[0] || "Evacuate immediately to designated safe zones."}
+                {alertLevel.protocols?.[0] || 'Evacuate immediately to designated safe zones.'}
               </p>
             </div>
 
@@ -112,26 +152,25 @@ export function AlertSystem() {
               <button
                 onClick={handleAcknowledge}
                 className={`flex-1 py-3 px-6 rounded-lg font-bold text-white shadow-lg transition-transform active:scale-95 ${
-                  alertLevel.level === 4 
-                    ? 'bg-red-600 hover:bg-red-700 shadow-red-500/30' 
+                  alertLevel.level === 4
+                    ? 'bg-red-600 hover:bg-red-700 shadow-red-500/30'
                     : 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/30'
                 }`}
               >
                 Acknowledge Warning
               </button>
-              
+
               <button
                 onClick={toggleAudio}
                 className="px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
-                title={audioEnabled ? "Mute Alarm" : "Enable Alarm Sound"}
+                title={audioEnabled ? 'Mute Alarm' : 'Enable Alarm Sound'}
               >
                 {audioEnabled ? <Volume2 size={24} /> : <VolumeX size={24} />}
               </button>
             </div>
           </div>
         </div>
-        
-        {/* Hidden Audio Element */}
+
         <audio ref={audioRef} loop>
           <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg" />
         </audio>

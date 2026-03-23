@@ -1,6 +1,26 @@
 const prisma = require('../db');
 const waterMonitoringEmitter = require('../utils/eventEmitter');
 
+function buildTimestampFilter({ startDate, endDate, days }) {
+  if (startDate || endDate) {
+    const timestamp = {};
+    if (startDate) timestamp.gte = new Date(startDate);
+    if (endDate) timestamp.lte = new Date(endDate);
+    return Object.keys(timestamp).length ? { timestamp } : {};
+  }
+
+  if (days !== undefined) {
+    const parsedDays = Number.parseInt(days, 10);
+    if (!Number.isNaN(parsedDays) && parsedDays > 0) {
+      const timestamp = new Date();
+      timestamp.setDate(timestamp.getDate() - parsedDays);
+      return { timestamp: { gte: timestamp } };
+    }
+  }
+
+  return {};
+}
+
 // Helper function to determine alert level based on distance reading from ultrasonic sensor
 // NOTE: Ultrasonic sensor measures DISTANCE from sensor to water surface
 // - Lower distance (cm) = Water is CLOSER to sensor = HIGHER water level = MORE DANGER (Level 4: 0-40cm)
@@ -40,21 +60,15 @@ async function calculateAlertLevel(distance) {
 exports.getAllWaterMonitoring = async (req, res) => {
   try {
     const { limit = 100, offset = 0, startDate, endDate } = req.query;
-
-    const where = {};
-    
-    // Filter by date range if provided
-    if (startDate || endDate) {
-      where.timestamp = {};
-      if (startDate) where.timestamp.gte = new Date(startDate);
-      if (endDate) where.timestamp.lte = new Date(endDate);
-    }
+    const take = Number.parseInt(limit, 10) || 100;
+    const skip = Number.parseInt(offset, 10) || 0;
+    const where = buildTimestampFilter({ startDate, endDate });
 
     const records = await prisma.waterMonitoring.findMany({
       where,
       orderBy: { timestamp: 'desc' },
-      take: parseInt(limit),
-      skip: parseInt(offset)
+      take,
+      skip,
     });
 
     const total = await prisma.waterMonitoring.count({ where });
@@ -63,9 +77,9 @@ exports.getAllWaterMonitoring = async (req, res) => {
       data: records,
       pagination: {
         total,
-        limit: parseInt(limit),
-        offset: parseInt(offset)
-      }
+        limit: take,
+        offset: skip,
+      },
     });
   } catch (error) {
     console.error('Get all water monitoring error:', error);
@@ -241,33 +255,36 @@ exports.deleteWaterMonitoring = async (req, res) => {
 // Get statistics
 exports.getWaterMonitoringStats = async (req, res) => {
   try {
-    const { days = 7 } = req.query;
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - parseInt(days));
+    const { days, startDate, endDate } = req.query;
+    const where = buildTimestampFilter({ days, startDate, endDate });
 
-    const records = await prisma.waterMonitoring.findMany({
-      where: {
-        timestamp: {
-          gte: startDate
-        }
-      },
-      orderBy: { timestamp: 'asc' }
+    const [aggregates, groupedAlerts] = await Promise.all([
+      prisma.waterMonitoring.aggregate({
+        where,
+        _count: { _all: true },
+        _avg: { waterLevel: true },
+        _max: { waterLevel: true },
+        _min: { waterLevel: true },
+      }),
+      prisma.waterMonitoring.groupBy({
+        by: ['alertLevel'],
+        where,
+        _count: { _all: true },
+      }),
+    ]);
+
+    const alertDistribution = groupedAlerts.reduce((distribution, item) => {
+      distribution[item.alertLevel] = item._count._all;
+      return distribution;
+    }, {});
+
+    res.json({
+      totalReadings: aggregates._count._all,
+      averageWaterLevel: aggregates._avg.waterLevel ?? 0,
+      maxWaterLevel: aggregates._max.waterLevel ?? 0,
+      minWaterLevel: aggregates._min.waterLevel ?? 0,
+      alertDistribution,
     });
-
-    const stats = {
-      totalReadings: records.length,
-      averageWaterLevel: records.reduce((sum, r) => sum + r.waterLevel, 0) / records.length,
-      maxWaterLevel: Math.max(...records.map(r => r.waterLevel)),
-      minWaterLevel: Math.min(...records.map(r => r.waterLevel)),
-      alertDistribution: {}
-    };
-
-    // Count alert level distribution
-    records.forEach(r => {
-      stats.alertDistribution[r.alertLevel] = (stats.alertDistribution[r.alertLevel] || 0) + 1;
-    });
-
-    res.json(stats);
   } catch (error) {
     console.error('Get water monitoring stats error:', error);
     res.status(500).json({ error: 'Internal server error' });

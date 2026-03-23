@@ -102,7 +102,7 @@ export function Contact() {
     loadSettings();
   }, []);
 
-  const sysContact = (sysSettings as any).contact || {};
+  const sysContact = (sysSettings as any)?.contact || {};
 
   const emergencyContacts = [
     { name: 'Emergency Hotline', number: sysContact.emergencyHotline || '911', type: 'National Emergency', icon: PhoneCall, color: '#EF4444', bgColor: '#FEE2E2' },
@@ -117,7 +117,7 @@ export function Contact() {
     {
       icon: MapPin,
       title: 'Address',
-      content: `${(sysSettings as any).barangay || 'Barangay 180'} Hall\n${(sysSettings as any).city || 'Caloocan City'}, Metro Manila\nPhilippines 1400`,
+      content: `${(sysSettings as any)?.barangay || 'Barangay 180'} Hall\n${(sysSettings as any)?.city || 'Caloocan City'}, Metro Manila\nPhilippines 1400`,
       color: '#FF6A00',
     },
     {

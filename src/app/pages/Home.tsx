@@ -3,8 +3,7 @@ import { motion, useInView, useScroll, useTransform, useSpring } from 'motion/re
 import {
   BookOpen, Phone, Shield, Droplets, Users,
   ChevronRight, Waves, Clock, MapPin,
-  ArrowUpRight, Zap, Bell, CloudRain, Sun, Cloud,
-  CloudSnow, CloudLightning, CloudDrizzle, Wind, Thermometer
+  Zap, Bell, Activity
 } from 'lucide-react';
 import { waterMonitoringAPI, alertLevelsAPI } from '../utils/api';
 import { useEffect, useState, useRef, useCallback } from 'react';
@@ -16,24 +15,6 @@ import { useWaterMonitoringSSE } from '../hooks/useWaterMonitoringSSE';
 import heroImage from "../../assets/hero-image.png";
 // Original City Hall photo for How It Works section
 import cityHallImage from "../../assets/city-hall.png";
-
-// Caloocan City coordinates for Open-Meteo
-const CALOOCAN_LAT = 14.6508;
-const CALOOCAN_LON = 120.9667;
-
-// WMO Weather codes to icon/label mapping
-function getWeatherInfo(code: number) {
-  if (code === 0) return { icon: Sun, label: 'Clear Sky', color: '#FACC15' };
-  if (code <= 3) return { icon: Cloud, label: 'Partly Cloudy', color: '#94A3B8' };
-  if (code <= 49) return { icon: Cloud, label: 'Foggy', color: '#94A3B8' };
-  if (code <= 57) return { icon: CloudDrizzle, label: 'Drizzle', color: '#60A5FA' };
-  if (code <= 67) return { icon: CloudRain, label: 'Rainy', color: '#3B82F6' };
-  if (code <= 77) return { icon: CloudSnow, label: 'Snow', color: '#CBD5E1' };
-  if (code <= 82) return { icon: CloudRain, label: 'Rain Showers', color: '#2563EB' };
-  if (code <= 86) return { icon: CloudSnow, label: 'Snow Showers', color: '#CBD5E1' };
-  if (code <= 99) return { icon: CloudLightning, label: 'Thunderstorm', color: '#F59E0B' };
-  return { icon: Cloud, label: 'Unknown', color: '#94A3B8' };
-}
 
 // Animated counter wrapper
 function AnimatedStat({ end, suffix = '', prefix = '' }: { end: number; suffix?: string; prefix?: string }) {
@@ -57,28 +38,10 @@ function Section({ children, className = '', id }: { children: React.ReactNode; 
   );
 }
 
-interface WeatherData {
-  temperature: number;
-  apparentTemp: number;
-  humidity: number;
-  windSpeed: number;
-  weatherCode: number;
-  precipitation: number;
-  daily: {
-    tempMax: number;
-    tempMin: number;
-    precipSum: number;
-    weatherCode: number;
-    date: string;
-  }[];
-}
-
 export function Home() {
   const [currentAlert, setCurrentAlert] = useState<any>(null);
   const [latestReading, setLatestReading] = useState<any>(null);
   const [alertLevels, setAlertLevelsList] = useState<any[]>([]);
-  const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [weatherLoading, setWeatherLoading] = useState(true);
 
   // Parallax scroll for hero background
   const heroRef = useRef<HTMLElement>(null);
@@ -99,19 +62,15 @@ export function Home() {
 
   useEffect(() => {
     loadData();
-    loadWeather();
   }, []);
 
   // Real-time SSE updates
   const handleWaterMonitoringUpdate = useCallback((newRecord: any) => {
     console.log('🌊 Real-time update received:', newRecord);
     setLatestReading(newRecord);
-    
-    // Update current alert based on new reading
-    const alert = alertLevels.find(
-      (a: any) => newRecord.waterLevel >= a.minWaterLevel && newRecord.waterLevel <= a.maxWaterLevel
-    ) || alertLevels.find((a: any) => a.level === 4);
-    
+
+    const alert = alertLevels.find((a: any) => a.level === newRecord.alertLevel) || null;
+
     if (alert) {
       setCurrentAlert(alert);
     }
@@ -121,23 +80,17 @@ export function Home() {
 
   const loadData = async () => {
     try {
-      const [readingsResponse, levels] = await Promise.all([
-        waterMonitoringAPI.getAll({ limit: 1 }),
+      const [latest, levels] = await Promise.all([
+        waterMonitoringAPI.getLatest().catch(() => null),
         alertLevelsAPI.getAll(),
       ]);
 
-      const readings = readingsResponse.data || [];
       setAlertLevelsList(levels);
 
-      if (readings.length > 0) {
-        const latest = readings[0];
+      if (latest) {
         setLatestReading(latest);
-        
-        // Find the current alert level based on water level
-        const alert = levels.find(
-          (a: any) => latest.waterLevel >= a.minWaterLevel && latest.waterLevel <= a.maxWaterLevel
-        ) || levels.find((a: any) => a.level === 4);
-        
+
+        const alert = levels.find((a: any) => a.level === latest.alertLevel) || null;
         setCurrentAlert(alert);
       } else {
         setCurrentAlert(levels.find((a: any) => a.level === 1));
@@ -146,33 +99,6 @@ export function Home() {
     } catch (error) {
       console.error('Error loading data:', error);
     }
-  };
-
-  const loadWeather = () => {
-    // Fetch weather from Open-Meteo (free, no API key)
-    fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${CALOOCAN_LAT}&longitude=${CALOOCAN_LON}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,precipitation&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code&timezone=Asia%2FManila&forecast_days=5`
-    )
-      .then(res => res.json())
-      .then(data => {
-        setWeather({
-          temperature: data.current.temperature_2m,
-          apparentTemp: data.current.apparent_temperature,
-          humidity: data.current.relative_humidity_2m,
-          windSpeed: data.current.wind_speed_10m,
-          weatherCode: data.current.weather_code,
-          precipitation: data.current.precipitation,
-          daily: data.daily.time.map((date: string, i: number) => ({
-            date,
-            tempMax: data.daily.temperature_2m_max[i],
-            tempMin: data.daily.temperature_2m_min[i],
-            precipSum: data.daily.precipitation_sum[i],
-            weatherCode: data.daily.weather_code[i],
-          })),
-        });
-        setWeatherLoading(false);
-      })
-      .catch(() => setWeatherLoading(false));
   };
 
   const getAlertColor = (level: number) => {
@@ -185,9 +111,6 @@ export function Home() {
     hidden: { opacity: 0, y: 24 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
   };
-
-  const currentWeather = weather ? getWeatherInfo(weather.weatherCode) : null;
-  const CurrentWeatherIcon = currentWeather?.icon ?? Cloud;
 
   return (
     <div className="overflow-x-hidden bg-gray-50">
@@ -308,7 +231,7 @@ export function Home() {
                 {[
                   { label: 'Water Level', value: `${latestReading?.waterLevel ?? '--'} cm`, icon: Droplets },
                   { label: 'Alert', value: currentAlert?.name ?? 'Safe', icon: Bell },
-                  { label: 'Weather', value: weather ? `${Math.round(weather.temperature)}°C` : '--', icon: CurrentWeatherIcon },
+                  { label: 'Sensors', value: isConnected ? 'Connected' : 'Reconnecting', icon: Activity },
                 ].map((item, i) => (
                   <div
                     key={i}
@@ -410,79 +333,65 @@ export function Home() {
               </div>
             </motion.div>
 
-            {/* Weather Forecast Card (Open-Meteo) */}
+            {/* System Status Card */}
             <motion.div
               variants={itemVariants}
               className="bg-white rounded-2xl border border-gray-200/80 shadow-sm hover:shadow-md transition-shadow p-6"
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <CloudRain size={14} />
-                  <span>Weather Forecast</span>
+                  <Activity size={14} />
+                  <span>System Status</span>
                 </div>
-                <span className="text-[10px] text-gray-400 uppercase tracking-wider">Caloocan City</span>
+                <span className="text-[10px] text-gray-400 uppercase tracking-wider">Live Telemetry</span>
               </div>
 
-              {weatherLoading ? (
-                <div className="flex items-center justify-center h-36">
-                  <div className="w-6 h-6 border-2 border-gray-200 border-t-[#FF6A00] rounded-full animate-spin" />
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-[11px] text-gray-500 mb-1">Data Stream</p>
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-amber-500'}`} />
+                      <p className="text-sm font-semibold text-[#1F2937]">{isConnected ? 'Connected' : 'Retrying'}</p>
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-[11px] text-gray-500 mb-1">Last Update</p>
+                    <p className="text-sm font-semibold text-[#1F2937]">
+                      {latestReading ? format(new Date(latestReading.timestamp), 'MMM d, HH:mm:ss') : '--'}
+                    </p>
+                  </div>
                 </div>
-              ) : weather ? (
-                <>
-                  {/* Current conditions */}
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-                      <CurrentWeatherIcon size={28} style={{ color: currentWeather?.color }} />
-                    </div>
-                    <div>
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-3xl font-bold text-[#1F2937]">{Math.round(weather.temperature)}</span>
-                        <span className="text-lg text-gray-400">°C</span>
-                      </div>
-                      <p className="text-sm text-gray-500">{currentWeather?.label}</p>
-                    </div>
-                  </div>
 
-                  {/* Current details */}
-                  <div className="grid grid-cols-3 gap-2 mb-4">
-                    {[
-                      { icon: Thermometer, label: 'Feels', value: `${Math.round(weather.apparentTemp)}°` },
-                      { icon: Droplets, label: 'Humidity', value: `${weather.humidity}%` },
-                      { icon: Wind, label: 'Wind', value: `${Math.round(weather.windSpeed)} km/h` },
-                    ].map((d) => (
-                      <div key={d.label} className="bg-gray-50 rounded-lg px-2 py-2 text-center">
-                        <d.icon size={12} className="text-gray-400 mx-auto mb-0.5" />
-                        <p className="text-xs text-gray-500">{d.label}</p>
-                        <p className="text-sm font-semibold text-[#1F2937]">{d.value}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* 5-day mini forecast */}
-                  <div className="border-t border-gray-100 pt-3">
-                    <div className="flex justify-between">
-                      {weather.daily.slice(0, 5).map((day, i) => {
-                        const dayInfo = getWeatherInfo(day.weatherCode);
-                        const DayIcon = dayInfo.icon;
-                        const dayLabel = i === 0 ? 'Today' : format(new Date(day.date), 'EEE');
-                        return (
-                          <div key={day.date} className="flex flex-col items-center gap-1 flex-1">
-                            <span className="text-[10px] text-gray-400">{dayLabel}</span>
-                            <DayIcon size={14} style={{ color: dayInfo.color }} />
-                            <span className="text-[11px] font-medium text-[#1F2937]">{Math.round(day.tempMax)}°</span>
-                            <span className="text-[10px] text-gray-400">{Math.round(day.tempMin)}°</span>
-                          </div>
-                        );
-                      })}
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { label: 'Rainfall', value: latestReading?.rainfallIndicator || 'N/A' },
+                    { label: 'Alert Level', value: `Level ${currentAlert?.level ?? 1}` },
+                    { label: 'Station', value: latestReading?.deviceStatus || 'Active' },
+                  ].map((item) => (
+                    <div key={item.label} className="bg-gray-50 rounded-lg px-2 py-2 text-center">
+                      <p className="text-xs text-gray-500">{item.label}</p>
+                      <p className="text-sm font-semibold text-[#1F2937]">{item.value}</p>
                     </div>
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-36 text-gray-400">
-                  <Cloud size={24} className="mb-2" />
-                  <p className="text-sm">Unable to load weather</p>
+                  ))}
                 </div>
-              )}
+
+                <div className="border-t border-gray-100 pt-3">
+                  <p className="text-xs text-gray-500 mb-2">Current threshold range</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-lg bg-orange-50 px-3 py-2">
+                      <p className="text-[11px] text-gray-500">Current Level</p>
+                      <p className="text-sm font-semibold" style={{ color: getAlertColor(currentAlert?.level ?? 1) }}>
+                        {currentAlert?.name || 'Monitoring'}
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-gray-50 px-3 py-2">
+                      <p className="text-[11px] text-gray-500">Safe Baseline</p>
+                      <p className="text-sm font-semibold text-[#1F2937]">{alertLevels[0]?.maxWaterLevel ?? '--'} cm max</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </motion.div>
           </div>
         </motion.div>
