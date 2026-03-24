@@ -316,7 +316,7 @@ export function Home() {
                 <span className="text-4xl font-bold text-[#1F2937]">{latestReading?.waterLevel ?? '--'}</span>
                 <span className="text-lg text-gray-400 pb-1">cm</span>
               </div>
-              <p className="text-sm text-gray-500 mb-4">Rainfall: {latestReading?.rainfallIndicator ?? 'N/A'}</p>
+              <p className="text-sm text-gray-500 mb-4">Water Distance Monitoring</p>
               <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden">
                 <motion.div
                   className="absolute inset-y-0 left-0 rounded-full"
