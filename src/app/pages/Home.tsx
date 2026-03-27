@@ -112,6 +112,13 @@ export function Home() {
     visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
   };
 
+   // 🔹 Add this function sa taas ng component mo (IMPORTANT)
+   const getWaterStatus = (level) => {
+     if (level <= 40) return "Normal";
+     if (level <= 70) return "Warning";
+     return "Critical";
+  };
+
   return (
     <div className="overflow-x-hidden bg-gray-50">
       {/* ─── HERO ─── */}
@@ -296,15 +303,8 @@ export function Home() {
                 ))}
               </div>
             </motion.div>
-
-            {/* Water Level Card */}
-           // 🔹 Add this function sa taas ng component mo (IMPORTANT)
-          const getWaterStatus = (level) => {
-            if (level <= 40) return "Normal";
-            if (level <= 70) return "Warning";
-            return "Critical";
-          };
-          
+            
+            {/* Water Level Card */}          
           // 🔹 Water Level Card
           <motion.div
             variants={itemVariants}
