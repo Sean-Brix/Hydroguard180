@@ -298,40 +298,62 @@ export function Home() {
             </motion.div>
 
             {/* Water Level Card */}
-            <motion.div
-              variants={itemVariants}
-              className="bg-white rounded-2xl border border-gray-200/80 shadow-sm hover:shadow-md transition-shadow p-6"
+           // 🔹 Add this function sa taas ng component mo (IMPORTANT)
+          const getWaterStatus = (level) => {
+            if (level <= 40) return "Normal";
+            if (level <= 70) return "Warning";
+            return "Critical";
+          };
+          
+          // 🔹 Water Level Card
+          <motion.div
+            variants={itemVariants}
+            className="bg-white rounded-2xl border border-gray-200/80 shadow-sm hover:shadow-md transition-shadow p-6"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <Droplets size={14} />
+                <span>Water Level</span>
+              </div>
+              <div className="flex items-center gap-1 text-xs text-gray-400">
+                <Clock size={12} />
+                {latestReading ? format(new Date(latestReading.timestamp), 'HH:mm') : '--:--'}
+              </div>
+            </div>
+          
+            <div className="flex items-end gap-2 mb-3">
+              <span className="text-4xl font-bold text-[#1F2937]">
+                {latestReading?.waterLevel ?? '--'}
+              </span>
+              <span className="text-lg text-gray-400 pb-1">cm</span>
+            </div>
+          
+            {/* 🔥 REPLACED: from "Water Distance Monitoring" → Water Status */}
+            <p
+              className="text-sm mb-4 font-medium"
+              style={{ color: getAlertColor(currentAlert?.level ?? 1) }}
             >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <Droplets size={14} />
-                  <span>Water Level</span>
-                </div>
-                <div className="flex items-center gap-1 text-xs text-gray-400">
-                  <Clock size={12} />
-                  {latestReading ? format(new Date(latestReading.timestamp), 'HH:mm') : '--:--'}
-                </div>
-              </div>
-              <div className="flex items-end gap-2 mb-3">
-                <span className="text-4xl font-bold text-[#1F2937]">{latestReading?.waterLevel ?? '--'}</span>
-                <span className="text-lg text-gray-400 pb-1">cm</span>
-              </div>
-              <p className="text-sm text-gray-500 mb-4">Water Distance Monitoring</p>
-              <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden">
-                <motion.div
-                  className="absolute inset-y-0 left-0 rounded-full"
-                  style={{ backgroundColor: getAlertColor(currentAlert?.level ?? 1) }}
-                  initial={{ width: '0%' }}
-                  whileInView={{ width: `${Math.min((latestReading?.waterLevel ?? 0), 100)}%` }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 1.5, ease: 'easeOut', delay: 0.3 }}
-                />
-              </div>
-              <div className="flex justify-between mt-1.5 text-[10px] text-gray-400">
-                <span>0 cm</span>
-                <span>100 cm</span>
-              </div>
-            </motion.div>
+              Water Status: {getWaterStatus(latestReading?.waterLevel ?? 0)}
+            </p>
+          
+            <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden">
+              <motion.div
+                className="absolute inset-y-0 left-0 rounded-full"
+                style={{ backgroundColor: getAlertColor(currentAlert?.level ?? 1) }}
+                initial={{ width: '0%' }}
+                whileInView={{
+                  width: `${Math.min((latestReading?.waterLevel ?? 0), 100)}%`
+                }}
+                viewport={{ once: true }}
+                transition={{ duration: 1.5, ease: 'easeOut', delay: 0.3 }}
+              />
+            </div>
+          
+            <div className="flex justify-between mt-1.5 text-[10px] text-gray-400">
+              <span>0 cm</span>
+              <span>100 cm</span>
+            </div>
+          </motion.div>
 
             {/* System Status Card */}
             <motion.div
