@@ -305,7 +305,6 @@ export function Home() {
             </motion.div>
             
             {/* Water Level Card */}          
-          // 🔹 Water Level Card
           <motion.div
             variants={itemVariants}
             className="bg-white rounded-2xl border border-gray-200/80 shadow-sm hover:shadow-md transition-shadow p-6"
