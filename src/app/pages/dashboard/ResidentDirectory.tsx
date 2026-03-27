@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Badge } from '../../components/ui/badge';
 import { toast } from 'sonner';
-import { UserPlus, Edit, Archive, Trash2, Search, Download, Users, UserCheck, ArchiveIcon } from 'lucide-react';
+import { UserPlus, Edit, Archive, Trash2, Search, Download, Users, UserCheck, ArchiveIcon, RotateCcw } from 'lucide-react';
 import { ConfirmModal } from '../../components/ConfirmModal';
 
 const exportToCSV = (rows: any[], filename: string) => {
@@ -148,6 +148,17 @@ export function ResidentDirectory() {
 
   const handlePermanentDelete = (id: string, name: string) => {
     setConfirmModal({ open: true, type: 'delete', id, name });
+  };
+
+  const handleRestore = async (id: string) => {
+    try {
+      await residentsAPI.update(id, { status: 'active' });
+      await loadResidents();
+      toast.success('Resident restored');
+    } catch (error) {
+      console.error('Error restoring resident:', error);
+      toast.error('Failed to restore resident');
+    }
   };
 
   const executeConfirm = async () => {
@@ -426,6 +437,15 @@ export function ResidentDirectory() {
                         {resident.status === 'archived' && (
                           <Button
                             size="sm"
+                            variant="outline"
+                            onClick={() => handleRestore(resident.id)}
+                          >
+                            <RotateCcw size={16} />
+                          </Button>
+                        )}
+                        {resident.status === 'archived' && (
+                          <Button
+                            size="sm"
                             variant="destructive"
                             onClick={() => handlePermanentDelete(resident.id, resident.residentName)}
                           >
@@ -482,6 +502,11 @@ export function ResidentDirectory() {
                   </Button>
                 )}
                 {resident.status === 'archived' && (
+                  <Button size="sm" variant="outline" className="flex-1 h-8 text-xs" onClick={() => handleRestore(resident.id)}>
+                    <RotateCcw size={14} className="mr-1" /> Restore
+                  </Button>
+                )}
+                {resident.status === 'archived' && (
                   <Button size="sm" variant="destructive" className="flex-1 h-8 text-xs" onClick={() => handlePermanentDelete(resident.id, resident.residentName)}>
                     <Trash2 size={14} className="mr-1" /> Delete
                   </Button>
@@ -499,7 +524,7 @@ export function ResidentDirectory() {
         title={confirmModal.type === 'archive' ? 'Archive Resident' : 'Permanently Delete Resident'}
         description={
           confirmModal.type === 'archive'
-            ? 'This resident will be moved to the archive. You can restore them later.'
+            ? 'This resident will be moved to the archive and removed from the active contacts list.'
             : 'This action cannot be undone. The resident will be permanently removed from the system.'
         }
         detail={confirmModal.name}
