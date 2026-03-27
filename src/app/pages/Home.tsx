@@ -1,5 +1,5 @@
-import { Link } from 'react-router';
-import { motion, useInView, useScroll, useTransform, useSpring } from 'motion/react';
+import { Link } from 'react-router-dom';
+import { motion, useScroll, useTransform, useSpring, useInView } from 'framer-motion';
 import {
   BookOpen, Phone, Shield, Droplets, Users,
   ChevronRight, Waves, Clock, MapPin,
@@ -327,7 +327,7 @@ export function Home() {
               <span className="text-lg text-gray-400 pb-1">cm</span>
             </div>
           
-            {/* 🔥 REPLACED: from "Water Distance Monitoring" → Water Status */}
+            {/* REPLACED: from "Water Distance Monitoring" → Water Status */}
             <p
               className="text-sm mb-4 font-medium"
               style={{ color: getAlertColor(currentAlert?.level ?? 1) }}
