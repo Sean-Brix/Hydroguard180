@@ -115,12 +115,8 @@ export function Login() {
           </form>
 
           <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <p className="text-xs text-gray-600 font-semibold mb-2">Demo Credentials:</p>
-            <div className="text-xs text-gray-600 space-y-1">
-              <p>Super Admin: <span className="font-mono">superadmin</span> / <span className="font-mono">Admin@123</span></p>
-              <p>Admin: <span className="font-mono">admin</span> / <span className="font-mono">Admin@123</span></p>
-              <p>Staff: <span className="font-mono">staff</span> / <span className="font-mono">Staff@123</span></p>
-            </div>
+            <p className="text-xs text-gray-600 font-semibold mb-2">Need access? Contact your team head or administrator.</p>
+            <div className="text-xs text-gray-600 space-y-1"></div>
           </div>
         </div>
 
