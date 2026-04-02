@@ -290,7 +290,7 @@ export function WaterMonitoring() {
 
   return (
     <div className="flex flex-col h-full min-h-0 gap-4 lg:overflow-hidden overflow-y-auto custom-scrollbar">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 flex-shrink-0">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shrink-0">
         <div className="flex items-center gap-2">
           <h1 className="text-xl font-bold text-[#1F2937]">Water Monitoring</h1>
           <span
@@ -330,7 +330,7 @@ export function WaterMonitoring() {
               </DialogHeader>
               <form onSubmit={handleAddReading} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Water Level (cm) *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Water Distance (cm) *</label>
                   <Input
                     type="number"
                     required

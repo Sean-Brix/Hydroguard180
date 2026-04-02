@@ -160,8 +160,7 @@ export function AlertLevels() {
                 style={{
                   borderColor: isActive ? alert.color : 
                               isBeingEdited ? '#93c5fd' :
-                              '#e5e7eb',
-                  ringColor: isActive ? alert.color : undefined,
+                              '#e5e7eb',            
                 }}
               >
                 {/* Color top bar */}
