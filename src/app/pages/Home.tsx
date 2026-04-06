@@ -430,17 +430,17 @@ export function Home() {
           >
             <p className="text-sm tracking-widest text-[#FF6A00] font-medium uppercase mb-3">Our Community</p>
             <h2 className="text-3xl md:text-4xl font-bold text-[#1F2937] mb-4">About Barangay 180</h2>
-           <p className="text-gray-500 max-w-xl mx-auto leading-relaxed">
+           <p className="text-gray-500 max-w-3xl mx-auto px-6 py-4 leading-relaxed text-center">
               Barangay 180 is located in <span className="font-bold">Soldiers Hills, North Caloocan City</span>, with the postal code <span className="font-bold">1420</span>. 
               The barangay was selected as the implementation site for the <span className="font-bold">HydroGuard 180 Flood Monitoring System</span> due to its vulnerability to rising water levels in nearby creeks, particularly during periods of heavy rainfall.
 
               <br /><br />
 
-              One of the key areas identified is the creek located along <span className="font-bold">Manggahan Street</span>, where sudden increases in water levels may lead to potential flooding in surrounding residential zones.
+              One of the key areas identified is the creek located along <span className="font-bold">Manggahan Street</span>, where sudden increases in water levels may lead to potential flooding in surrounding residential zones. Because of this, Barangay 180 was chosen as the pilot location for the HydroGuard 180 project in order to help monitor water levels in real time and improve early flood response within the community.
 
               <br /><br />
 
-              By installing the HydroGuard 180 system in this area, the project aims to provide timely monitoring of the creek’s water level and enable faster action from both residents and barangay officials in the event of possible flooding.
+              By installing the HydroGuard 180 system in this area, the project aims to provide timely monitoring of the creek’s water level and enable faster action from both residents and barangay officials in the event of possible flooding. Through the integration of monitoring technology and early warning alerts, the initiative seeks to strengthen disaster preparedness and help protect the safety of the community.
            </p>
           </motion.div>
 
