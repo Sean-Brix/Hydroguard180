@@ -35,6 +35,17 @@ export function WaterMonitoring() {
   return '➖ Stable';
 };
 
+  // Real-time timestamp formatting for better readability:
+  const formatTimeWithSeconds = (timestamp: string) => {
+    const date = new Date(timestamp);
+
+    const hh = String(date.getHours()).padStart(2, '0');
+    const mm = String(date.getMinutes()).padStart(2, '0');
+    const ss = String(date.getSeconds()).padStart(2, '0');
+
+    return `${hh}:${mm}:${ss}`;
+  };
+
   // Real-time SSE updates
   const handleWaterMonitoringUpdate = useCallback((newRecord: any) => {
     setReadings(prev => {
@@ -414,8 +425,8 @@ export function WaterMonitoring() {
                 <TableHead>Date</TableHead>
                 <TableHead>Time</TableHead>
                 <TableHead>Water Distance cm</TableHead>
-                <TableHead>Alert Level</TableHead>
                 <TableHead>Trend</TableHead>
+                <TableHead>Alert Level</TableHead>
                 <TableHead>Last Updated</TableHead>
               </TableRow>
             </TableHeader>
@@ -430,25 +441,41 @@ export function WaterMonitoring() {
                 filteredReadings.map((reading, index) => {
                   const prev = filteredReadings[index - 1];
                   const trend = getTrend(reading.waterLevel, prev?.waterLevel);
+                  const alertInfo = getAlertLevelByLevel(reading.alertLevel);
 
                   return (
                     <TableRow key={reading.id}>
+                      {/* Date and time formatting for better readability */}
                       <TableCell>{formatDate(reading.timestamp)}</TableCell>
 
+                      {/* Time */}
                       <TableCell>{formatTime(reading.timestamp)}</TableCell>
 
+                      {/* Water level */}
                       <TableCell className="font-semibold">
                         {reading.waterLevel} cm
                       </TableCell>
 
-                      <TableCell>{trend}</TableCell>
+                      {/* Trend indicator with colored arrows and text */}
+                       <TableCell>
+                        <span
+                          style={{
+                            color: alertInfo?.color || '#6b7280',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {trend}
+                        </span>
+                      </TableCell>
 
+                      {/* Alert level */}
                       <TableCell>
                         {getAlertBadge(reading.alertLevel)}
                       </TableCell>
 
+                      {/* Last Update */}
                       <TableCell className="text-xs text-gray-500">
-                        {formatTime(reading.timestamp)}
+                        {formatTimeWithSeconds(reading.timestamp)}
                       </TableCell>
                     </TableRow>
                   );
