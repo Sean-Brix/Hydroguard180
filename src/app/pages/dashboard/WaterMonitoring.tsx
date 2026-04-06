@@ -27,6 +27,14 @@ export function WaterMonitoring() {
     loadReadings();
   }, []);
 
+  // Comparing current and previous values to determine trend status:
+  const getTrend = (current: number, previous?: number) => {
+  if (!previous) return '➖ Stable';
+  if (current > previous) return '⬆ Rising';
+  if (current < previous) return '⬇ Falling';
+  return '➖ Stable';
+};
+
   // Real-time SSE updates
   const handleWaterMonitoringUpdate = useCallback((newRecord: any) => {
     setReadings(prev => {
@@ -405,29 +413,47 @@ export function WaterMonitoring() {
               <TableRow>
                 <TableHead>Date</TableHead>
                 <TableHead>Time</TableHead>
-                <TableHead>Water Level</TableHead>
+                <TableHead>Water Distance cm</TableHead>
                 <TableHead>Alert Level</TableHead>
+                <TableHead>Trend</TableHead>
+                <TableHead>Last Updated</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredReadings.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-gray-500">
+                  <TableCell colSpan={6} className="text-center text-gray-500">
                     No readings found
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredReadings.map((reading) => (
-                  <TableRow key={reading.id}>
-                    <TableCell>{formatDate(reading.timestamp)}</TableCell>
-                    <TableCell>{formatTime(reading.timestamp)}</TableCell>
-                    <TableCell className="font-semibold">
-                      {reading.waterLevel} {reading.waterLevelUnit}
-                    </TableCell>
-                    <TableCell>{getAlertBadge(reading.alertLevel)}</TableCell>
-                  </TableRow>
-                ))
-              )}
+                filteredReadings.map((reading, index) => {
+                  const prev = filteredReadings[index - 1];
+                  const trend = getTrend(reading.waterLevel, prev?.waterLevel);
+
+                  return (
+                    <TableRow key={reading.id}>
+                      <TableCell>{formatDate(reading.timestamp)}</TableCell>
+
+                      <TableCell>{formatTime(reading.timestamp)}</TableCell>
+
+                      <TableCell className="font-semibold">
+                        {reading.waterLevel} cm
+                      </TableCell>
+
+                      <TableCell>{trend}</TableCell>
+
+                      <TableCell>
+                        {getAlertBadge(reading.alertLevel)}
+                      </TableCell>
+
+                      <TableCell className="text-xs text-gray-500">
+                        {formatTime(reading.timestamp)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}            
             </TableBody>
           </Table>
         </div>
