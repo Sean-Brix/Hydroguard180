@@ -442,8 +442,11 @@ export function WaterMonitoring() {
             {/* Time since last reading was taken */}
             <span>
               <span className="font-semibold text-[#1F2937]">
-                {getTimeSinceLastReading(readings[0]?.timestamp)}
-                </span> last detect</span>
+                {readings?.length && readings[0]?.timestamp
+                  ? getTimeSinceLastReading(readings[0].timestamp)
+                  : "No data"}
+              </span> last detect
+            </span>
             
             {/* Peak reading of water level */}
             <span>
