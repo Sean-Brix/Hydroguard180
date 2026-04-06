@@ -502,7 +502,7 @@ export function WaterMonitoring() {
                           <span
                             style={{
                               color: alertInfo?.color || '#6b7280',
-                              fontWeight: 700,
+                              fontWeight: 500,
                               fontSize: '16px',
                             }}
                           >
@@ -516,7 +516,7 @@ export function WaterMonitoring() {
                       </TableCell>
 
                       {/* Last Update */}
-                      <TableCell className="text-xs text-gray-500">
+                      <TableCell className="text-sm text-gray-500">
                         {formatTimeWithSeconds(reading.timestamp)}
                       </TableCell>
                     </TableRow>
