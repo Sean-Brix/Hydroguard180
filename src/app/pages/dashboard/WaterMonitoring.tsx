@@ -48,6 +48,22 @@ export function WaterMonitoring() {
     return `${hh}:${mm}:${ss}`;
   };
 
+  // Function of time difference
+  const getTimeSinceLastReading = (lastTimestamp?: string) => {
+    if (!lastTimestamp) return 'N/A';
+
+    const now = new Date().getTime();
+    const last = new Date(lastTimestamp).getTime();
+
+    const diffMs = now - last;
+
+    const seconds = Math.floor(diffMs / 1000);
+    const minutes = Math.floor(seconds / 60);
+
+    if (minutes > 0) return `${minutes} min ago`;
+    return `${seconds} sec ago`;
+  };
+  
   // Real-time SSE updates
   const handleWaterMonitoringUpdate = useCallback((newRecord: any) => {
     setReadings(prev => {
@@ -410,10 +426,30 @@ export function WaterMonitoring() {
             />
           </div>
           <div className="flex items-center gap-4 text-xs text-gray-500">
-            <span><span className="font-semibold text-[#1F2937]">{readings.length}</span> total</span>
-            <span><span className="font-semibold text-[#1F2937]">{readings[0]?.waterLevel || 0}</span> cm latest</span>
-            <span><span className="font-semibold text-[#1F2937]">{(readings.reduce((sum, r) => sum + r.waterLevel, 0) / readings.length || 0).toFixed(1)}</span> cm avg</span>
-            <span><span className="font-semibold text-[#1F2937]">{Math.max(...readings.map(r => r.waterLevel), 0)}</span> cm peak</span>
+          
+            {/* Total Reading of Water Level */}
+            <span>
+              <span className="font-semibold text-[#1F2937]">
+                {readings.length}
+                </span>total</span>
+            
+            {/* Latest Reading of Water Level */}    
+            <span>
+              <span className="font-semibold text-[#1F2937]">
+                {readings[0]?.waterLevel || 0}
+                </span> cm latest</span>
+            
+            {/* Time since last reading was taken */}
+            <span>
+              <span className="font-semibold text-[#1F2937]">
+                {getTimeSinceLastReading(readings[0]?.timestamp)}
+                </span> last detect</span>
+            
+            {/* Peak reading of water level */}
+            <span>
+              <span className="font-semibold text-[#1F2937]">
+                {Math.max(...readings.map(r => r.waterLevel), 0)}
+                </span> cm peak</span>
           </div>
         </div>
       </div>
