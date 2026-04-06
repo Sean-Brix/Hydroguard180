@@ -430,9 +430,12 @@ export function Home() {
           >
             <p className="text-sm tracking-widest text-[#FF6A00] font-medium uppercase mb-3">Our Community</p>
             <h2 className="text-3xl md:text-4xl font-bold text-[#1F2937] mb-4">About Barangay 180</h2>
-            <p className="text-gray-500 max-w-xl mx-auto">
-              A resilient community working together. Our system ensures the safety of every resident through technology and preparedness.
-            </p>
+           <p className="text-gray-500 max-w-xl mx-auto">
+              Barangay 180 is located in <span className="font-bold">Soldiers Hills, North Caloocan City</span>, with the postal code <span className="font-bold">1420</span>. 
+              The barangay was selected as the implementation site for the <span className="font-bold">HydroGuard 180 Flood Monitoring System</span> due to its vulnerability to rising water levels in nearby creeks, particularly during periods of heavy rainfall.
+              One of the key areas identified is the creek located along <span className="font-bold">Manggahan Street</span>, where sudden increases in water levels may lead to potential flooding in surrounding residential zones. Because of this, Barangay 180 was chosen as the pilot location for the HydroGuard 180 project in order to help monitor water levels in real time and improve early flood response within the community.
+              By installing the HydroGuard 180 system in this area, the project aims to provide timely monitoring of the creek’s water level and enable faster action from both residents and barangay officials in the event of possible flooding. Through the integration of monitoring technology and early warning alerts, the initiative seeks to strengthen disaster preparedness and help protect the safety of the community.
+           </p>
           </motion.div>
 
           <motion.div
@@ -444,7 +447,7 @@ export function Home() {
           >
             {[
               { icon: Users, label: 'Residents Protected', value: 18802, suffix: '', color: '#3B82F6', bg: 'bg-blue-50' },
-              { icon: Droplets, label: 'Monitoring Stations', value: 3, suffix: ' Active', color: '#FF6A00', bg: 'bg-orange-50' },
+              { icon: Droplets, label: 'Monitoring Stations', value: 1, suffix: ' Active', color: '#FF6A00', bg: 'bg-orange-50' },
               { icon: Zap, label: 'Response Time', value: 0, suffix: '', color: '#8B5CF6', bg: 'bg-violet-50', textOverride: 'Real-time' },
               { icon: Shield, label: 'Safety Protocols', value: 4, suffix: ' Levels', color: '#22C55E', bg: 'bg-green-50' },
             ].map((stat, idx) => (
