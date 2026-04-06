@@ -312,7 +312,7 @@ export function Home() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2 text-sm text-gray-500">
                 <Droplets size={14} />
-                <span>Water Level</span>
+                <span>Water Distance</span>
               </div>
               <div className="flex items-center gap-1 text-xs text-gray-400">
                 <Clock size={12} />
