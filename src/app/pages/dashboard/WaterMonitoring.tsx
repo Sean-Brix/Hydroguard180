@@ -30,8 +30,10 @@ export function WaterMonitoring() {
   // Comparing current and previous values to determine trend status:
   const getTrend = (current: number, previous?: number) => {
   if (!previous) return '➖ Stable';
-  if (current > previous) return '⬆ Rising';
-  if (current < previous) return '⬇ Falling';
+
+  // Reveresed Logic (IMPORTANT)
+  if (current < previous) return '⬆ Rising'; // water is rising (danger)
+  if (current > previous) return '⬇ Falling'; // water is falling (safe)
   return '➖ Stable';
 };
 
@@ -457,16 +459,17 @@ export function WaterMonitoring() {
                       </TableCell>
 
                       {/* Trend indicator with colored arrows and text */}
-                       <TableCell>
-                        <span
-                          style={{
-                            color: alertInfo?.color || '#6b7280',
-                            fontWeight: 600,
-                          }}
-                        >
-                          {trend}
-                        </span>
-                      </TableCell>
+                        <TableCell>
+                          <span
+                            style={{
+                              color: alertInfo?.color || '#6b7280',
+                              fontWeight: 700,
+                              fontSize: '16px',
+                            }}
+                          >
+                            {trend}
+                          </span>
+                        </TableCell>
 
                       {/* Alert level */}
                       <TableCell>
