@@ -236,7 +236,7 @@ export function Home() {
                 transition={{ duration: 0.6, delay: 1.3 }}
               >
                 {[
-                  { label: 'Water Level', value: `${latestReading?.waterLevel ?? '--'} cm`, icon: Droplets },
+                  { label: 'Water Distance', value: `${latestReading?.waterLevel ?? '--'} cm`, icon: Droplets },
                   { label: 'Alert', value: currentAlert?.name ?? 'Safe', icon: Bell },
                   { label: 'Sensors', value: isConnected ? 'Connected' : 'Reconnecting', icon: Activity },
                 ].map((item, i) => (

@@ -143,6 +143,7 @@ export function AlertLevels() {
 
       {/* Main content: Cards + Threshold side by side */}
       <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-5 gap-4">
+       
         {/* Alert Level Cards - 2x2 grid on left */}
         <div className="lg:col-span-3 grid grid-cols-2 gap-3 auto-rows-min lg:auto-rows-fr">
           {alertLevels.map((alert, i) => {
