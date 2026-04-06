@@ -267,7 +267,7 @@ export function Analytics() {
               return (
                 <div key={alertInfo.level}>
                   <div className="flex justify-between items-center mb-1.5">
-                    <span className="text-xs font-medium text-gray-700">Level {alertInfo.level} â€” {alertInfo.name}</span>
+                    <span className="text-xs font-medium text-gray-700">Level {alertInfo.level} {alertInfo.name}</span>
                     <span className="text-xs font-semibold text-gray-900">
                       {count} <span className="text-gray-400 font-normal">({pct.toFixed(1)}%)</span>
                     </span>
