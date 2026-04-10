@@ -207,9 +207,30 @@ const handleExport = async () => {
       // =========================
       const waterLevels = filteredReadings.map(r => r.waterLevel);
 
+      // Sort readings by timestamp ascending for trend analysis
+      const sortedReadings = [...filteredReadings].sort(
+        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
+
+      // ===========================
+      // FILTERED DATA IN 30 MINUTES
+      // ===========================
+      const filtered30MinData = sortedReadings.filter((reading, index) => {
+        if (index === 0) return true;
+
+        const currentTime = new Date(reading.timestamp).getTime();
+        const prevTime = new Date(sortedReadings[index - 1].timestamp).getTime();
+
+        const diffMinutes = (currentTime - prevTime) / (1000 * 60);
+
+        return diffMinutes >= 30;
+      });
+
+      // Basic statistics
       const avgWaterLevel =
         waterLevels.reduce((sum, val) => sum + val, 0) / (waterLevels.length || 1);
 
+      // Handle case where there are no readings to avoid -Infinity/Infinity
       const maxWaterLevel = Math.max(...waterLevels, 0);
       const minWaterLevel = Math.min(...waterLevels, 0);
 
@@ -407,8 +428,8 @@ const handleExport = async () => {
       // =========================
       // 📋 TABLE (UPDATED STRUCTURE)
       // =========================
-      const tableData = filteredReadings.map((reading, index) => {
-        const prev = filteredReadings[index - 1];
+      const tableData = filtered30MinData.map((reading, index) => {
+        const prev = filtered30MinData[index - 1];
         const trend = getTrend(reading.waterLevel, prev?.waterLevel);
         const alertInfo = getAlertLevelByLevel(reading.alertLevel);
 
@@ -417,7 +438,7 @@ const handleExport = async () => {
           `${reading.waterLevel} cm`,
           trend,
           `Level ${reading.alertLevel} - ${alertInfo?.name || 'Unknown'}`,
-          format(new Date(reading.timestamp), 'h:mm:ss a'), // LAST UPDATE
+          format(new Date(reading.timestamp), 'h:mm:ss a'),
         ];
       });
 
@@ -430,22 +451,11 @@ const handleExport = async () => {
         styles: { fontSize: 8 },
       });
 
-      const filtered1HourData = filteredReadings.filter((reading, index) => {
-        if (index === 0) return true;
-
-        const currentTime = new Date(reading.timestamp).getTime();
-        const prevTime = new Date(filteredReadings[index - 1].timestamp).getTime();
-
-        const diffMinutes = (currentTime - prevTime) / (1000 * 60);
-
-        return diffMinutes >= 60;
-      });
-
-      const chartLabels = filtered1HourData.map(r =>
+      const chartLabels = filtered30MinData.map(r =>
         format(new Date(r.timestamp), 'MM/dd HH:mm')
       );
 
-      const chartData = filtered1HourData.map(r => r.waterLevel);
+      const chartData = filtered30MinData.map(r => r.waterLevel);
 
       // =========================
       // 📊 CHART GENERATION
