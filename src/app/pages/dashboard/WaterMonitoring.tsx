@@ -284,7 +284,6 @@ const handleExport = async () => {
     const description150 = generateWaterLevelDescription();
     const summary100 = generateWaterLevelSummary();
 
-
       // =========================
       // 📄 HEADER
       // =========================
@@ -310,6 +309,42 @@ const handleExport = async () => {
 
   Most Frequent Alert Level: ${mostFrequentAlert?.[0] || 'N/A'}
       `;
+
+    // ====================================
+    // 🧠 AI DESCRIPTION + SUMMARY SECTION
+    // ====================================
+
+    if (y > 250) {
+      doc.addPage();
+      y = 20;
+    }
+
+    doc.setFontSize(12);
+    doc.text('Analysis Description', 14, y);
+    y += 6;
+
+    doc.setFontSize(10);
+
+    const descLines = doc.splitTextToSize(description150, pageWidth - 28);
+    doc.text(descLines, 14, y);
+    y += descLines.length * 5 + 10;
+
+    // -------------------------
+
+    if (y > 250) {
+      doc.addPage();
+      y = 20;
+    }
+
+    doc.setFontSize(12);
+    doc.text('Report Summary', 14, y);
+    y += 6;
+
+    doc.setFontSize(10);
+
+    const summaryLines = doc.splitTextToSize(summary100, pageWidth - 28);
+    doc.text(summaryLines, 14, y);
+    y += summaryLines.length * 5 + 15;
 
       const splitSummary = doc.splitTextToSize(summary, pageWidth - 28);
       doc.text(splitSummary, 14, y);
