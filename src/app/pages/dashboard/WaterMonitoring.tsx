@@ -212,6 +212,7 @@ const handleExport = async () => {
       // =========================
       // 📈 TREND ANALYSIS
       // =========================
+
       let rising = 0,
         falling = 0,
         stable = 0;
@@ -232,6 +233,57 @@ const handleExport = async () => {
       else if (falling > rising)
         trendText = 'Water levels are decreasing.';
       else trendText = 'Water levels are stable.';
+
+    // =========================
+    // 🧠 DESCRIPTION FUNCTIONS (STEP 2)
+    // =========================
+
+    const generateWaterLevelDescription = () => {
+      const trend =
+        rising > falling
+          ? 'increasing'
+          : falling > rising
+          ? 'decreasing'
+          : 'stable';
+
+      return `
+    The HydroGuard 180 system recorded ${filteredReadings.length} water level readings during the monitoring period. 
+    The data shows that the water level is currently ${trend}, with values ranging from ${minWaterLevel.toFixed(
+        2
+      )} cm to ${maxWaterLevel.toFixed(2)} cm.
+
+    The average water level recorded is ${avgWaterLevel.toFixed(
+        2
+      )} cm, which indicates the general condition of the monitored area.
+
+    Environmental factors such as rainfall and drainage flow may affect fluctuations in water levels. Continuous monitoring is necessary for early flood detection and response.
+      `.trim();
+    };
+
+    const generateWaterLevelSummary = () => {
+      const risk =
+        highestAlertLevel >= 4
+          ? 'high risk'
+          : highestAlertLevel === 3
+          ? 'moderate risk'
+          : highestAlertLevel === 2
+          ? 'low risk'
+          : 'safe condition';
+
+      return `
+    The monitoring data indicates a ${risk} level based on recorded water readings. 
+    The system shows ${rising > falling ? 'an increasing' : falling > rising ? 'a decreasing' : 'a stable'} trend overall. 
+    HydroGuard 180 successfully tracks real-time water behavior for flood prevention and early warning purposes.
+      `.trim();
+    };
+
+    // =========================
+    // 🧾 GENERATE TEXT (STEP 3)
+    // =========================
+
+    const description150 = generateWaterLevelDescription();
+    const summary100 = generateWaterLevelSummary();
+
 
       // =========================
       // 📄 HEADER
