@@ -18,6 +18,9 @@ export function WaterMonitoring() {
   const [filteredReadings, setFilteredReadings] = useState<any[]>([]);
   const [filterLevel, setFilterLevel] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [dateFilter, setDateFilter] = useState(''); // YYYY-MM-DD
+  const [monthFilter, setMonthFilter] = useState(''); // YYYY-MM
+  const [yearFilter, setYearFilter] = useState(''); // YYYY
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const [newReading, setNewReading] = useState({
@@ -112,6 +115,24 @@ export function WaterMonitoring() {
 
   const applyFilters = () => {
     let filtered = [...readings];
+
+    if (dateFilter) {
+      filtered = filtered.filter(r => 
+        format(new Date(r.timestamp), 'yyyy-MM-dd') === dateFilter
+      );
+    }
+
+    if (monthFilter) {
+      filtered = filtered.filter(r => 
+        format(new Date(r.timestamp), 'yyyy-MM') === monthFilter
+      );
+    }
+
+    if (yearFilter) {
+      filtered = filtered.filter(r => 
+        format(new Date(r.timestamp), 'yyyy') === yearFilter
+      );
+    }
 
     if (filterLevel !== 'all') {
       filtered = filtered.filter(r => r.alertLevel === parseInt(filterLevel));
@@ -385,7 +406,7 @@ const handleExport = async () => {
           `${reading.waterLevel} cm`,
           trend,
           `Level ${reading.alertLevel} - ${alertInfo?.name || 'Unknown'}`,
-          format(new Date(reading.timestamp), 'MMM dd, yyyy h:mm:ss a'), // LAST UPDATE
+          format(new Date(reading.timestamp), 'h:mm:ss a'), // LAST UPDATE
         ];
       });
 
@@ -456,26 +477,26 @@ const handleExport = async () => {
     }
   };
 
-const getAlertBadge = (level: number) => {
-    const alertInfo = getAlertLevelByLevel(level);
-    if (!alertInfo) return null;
-    
-    return (
-      <Badge style={{ backgroundColor: alertInfo.color, color: 'white' }}>
-        Level {level} - {alertInfo.name}
-      </Badge>
-    );
-  };
+  const getAlertBadge = (level: number) => {
+      const alertInfo = getAlertLevelByLevel(level);
+      if (!alertInfo) return null;
+      
+      return (
+        <Badge style={{ backgroundColor: alertInfo.color, color: 'white' }}>
+          Level {level} - {alertInfo.name}
+        </Badge>
+      );
+    };
 
-  const formatDate = (timestamp: string) => {
-    const date = new Date(timestamp);
-    return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-  };
+    const formatDate = (timestamp: string) => {
+      const date = new Date(timestamp);
+      return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    };
 
-  const formatTime = (timestamp: string) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-  };
+    const formatTime = (timestamp: string) => {
+      const date = new Date(timestamp);
+      return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    };
 
   return (
     <div className="flex flex-col h-full min-h-0 gap-4 lg:overflow-hidden overflow-y-auto custom-scrollbar">
@@ -547,7 +568,48 @@ const getAlertBadge = (level: number) => {
 
       {/* Filters + Stats — compact row */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-100 px-4 py-3 flex-shrink-0">
-        <div className="flex flex-wrap items-end gap-3">
+        <div className="flex flex-wrap items-end gap-2">
+          
+          {/* Date Filter */}
+          <div className="flex-1 min-w-[140px]">
+            <label className="block text-[10px] text-gray-500 mb-1">
+              Date
+            </label>
+            <Input
+              type="date"
+              className="h-8 text-sm"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+            />
+          </div>
+
+          {/* Month Filter */}
+          <div className="flex-1 min-w-[140px]">
+            <label className="block text-[10px] text-gray-500 mb-1">
+              Month
+            </label>
+            <Input
+              type="month"
+              className="h-8 text-sm"
+              value={monthFilter}
+              onChange={(e) => setMonthFilter(e.target.value)}
+            />
+          </div>
+
+          {/* Year Filter */}
+          <div className="flex-1 min-w-[140px]">
+            <label className="block text-[10px] text-gray-500 mb-1">
+              Year
+            </label>
+            <Input
+              type="number"
+              placeholder="Year (e.g. 2024)"
+              className="h-8 text-sm"
+              value={yearFilter}
+              onChange={(e) => setYearFilter(e.target.value)}
+            />
+          </div>
+
           <div className="flex-1 min-w-[160px]">
             <label className="block text-[10px] text-gray-500 mb-1">
               <Filter size={10} className="inline mr-0.5" />
