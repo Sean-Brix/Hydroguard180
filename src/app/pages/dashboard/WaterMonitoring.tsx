@@ -226,8 +226,20 @@ const handleExport = async () => {
       const { default: jsPDF } = await import('jspdf');
       const { default: autoTable } = await import('jspdf-autotable');
 
-      const doc = new jsPDF();
+      // PAGE SETUP
+      const doc = new jsPDF({
+        unit: 'mm',
+        format: 'a4',
+        orientation: 'portrait',
+      });
+
+      const marginLeft = 20;
+      const marginRight = 20;
       const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+
+      let y = 20;
+
       const timestamp = format(new Date(), 'MMMM dd, yyyy h:mm a');
 
       // =========================
@@ -245,8 +257,8 @@ const handleExport = async () => {
         waterLevels.reduce((sum, val) => sum + val, 0) / (waterLevels.length || 1);
 
       // Handle case where there are no readings to avoid -Infinity/Infinity
-      const maxWaterLevel = Math.max(...waterLevels, 0);
-      const minWaterLevel = Math.min(...waterLevels, 0);
+      const maxWaterLevel = waterLevels.length ? Math.max(...waterLevels) : 0;
+      const minWaterLevel = waterLevels.length ? Math.min(...waterLevels) : 0;
 
       // =========================
       // ⚠️ ALERT ANALYSIS
@@ -306,26 +318,25 @@ const handleExport = async () => {
     // =========================
 
     const generateWaterLevelDescription = () => {
-      const trend =
-        rising > falling
-          ? 'increasing'
-          : falling > rising
-          ? 'decreasing'
-          : 'stable';
+  const trend =
+    rising > falling
+      ? 'increasing'
+      : falling > rising
+      ? 'decreasing'
+      : 'stable';
 
-      return `
-    The HydroGuard 180 system recorded ${filteredReadings.length} water level readings during the monitoring period. 
-    The data shows that the water level is currently ${trend}, with values ranging from ${minWaterLevel.toFixed(
-        2
-      )} cm to ${maxWaterLevel.toFixed(2)} cm.
+    return `
+  The HydroGuard 180 Water Distance Monitoring System recorded a total of ${filteredReadings.length} water level readings during the selected monitoring period, which are collected at approximately 30-minute intervals to ensure consistent environmental tracking and accurate flood detection analysis.
 
-    The average water level recorded is ${avgWaterLevel.toFixed(
-        2
-      )} cm, which indicates the general condition of the monitored area.
+  Based on the gathered data, the overall water level trend is observed to be ${trend}. The recorded values range from a minimum of ${minWaterLevel.toFixed(2)} cm to a maximum of ${maxWaterLevel.toFixed(2)} cm, showing the fluctuation of water distance over time. These variations may indicate environmental changes such as rainfall intensity, drainage flow conditions, or surrounding water accumulation patterns.
 
-    Environmental factors such as rainfall and drainage flow may affect fluctuations in water levels. Continuous monitoring is necessary for early flood detection and response.
-      `.trim();
-    };
+  The computed average water level of ${avgWaterLevel.toFixed(2)} cm represents the general condition of the monitored area, providing a baseline for evaluating whether water levels are within safe or critical thresholds.
+
+  The system continuously monitors changes in water levels every 30 minutes, allowing real-time detection of sudden rises or drops. This interval-based monitoring is essential for early flood warning systems, especially in flood-prone areas where rapid water level changes may occur.
+
+  Overall, the collected data suggests that the monitored environment is currently classified under a ${trend} water behavior pattern. Continuous monitoring and data analysis are recommended to improve predictive accuracy and enhance disaster preparedness and response planning.
+    `.trim();
+  };
 
     const generateWaterLevelSummary = () => {
       const risk =
@@ -352,17 +363,43 @@ const handleExport = async () => {
     const summary100 = generateWaterLevelSummary();
 
       // =========================
-      // 📄 HEADER
+      // HEADER TITLE 
       // =========================
       doc.setFontSize(18);
-      doc.text('HydroGuard 180 Water Monitoring Report', pageWidth / 2, 20, {
-        align: 'center',
-      });
+      doc.text('HYDROGUARD 180 WATER DISTANCE MONITORING REPORT',
+        pageWidth / 2, y,
+        { align: 'center',}
+      );
 
-      doc.setFontSize(10);
-      doc.text(timestamp, pageWidth / 2, 27, { align: 'center' });
+      // =========================
+      // ADDRESS
+      // =========================
+      doc.setFont('times', 'normal');
+      doc.setFontSize(14);
 
-      let y = 40;
+      doc.text(
+        'Barangay 180, Soldiers Hills Subdivision, North Caloocan City, Metro Manila, Philippines',
+        pageWidth / 2, 
+        y,
+        { align: 'center' }
+      );
+
+      y += 10;
+
+      // ==============================
+      // DATE + TIME (RIGHT SIDE ALIGN
+      // ==============================
+      const now = new Date();
+      const dateText = format(now, 'MMMM dd, yyyy');
+      const timeText = format(now, 'h:mm:ss a');
+
+      doc.setFontSize(11);
+
+      doc.text(`Date: ${dateText}`, pageWidth - marginRight, y, { align: 'right' });
+      doc.text(`Time: ${timeText}`, pageWidth - marginRight, y + 6, { align: 'right' });
+      y += 15;
+
+
 
       // =========================
       // 📌 SUMMARY SECTION
@@ -386,11 +423,13 @@ const handleExport = async () => {
       y = 20;
     }
 
-    doc.setFontSize(12);
+    doc.setFont('times', 'bold');
+    doc.setFontSize(13);
     doc.text('Analysis Description', 14, y);
     y += 6;
 
-    doc.setFontSize(10);
+    doc.setFont('times', 'normal');
+    doc.setFontSize(12);
 
     const descLines = doc.splitTextToSize(description150, pageWidth - 28);
     doc.text(descLines, 14, y);
@@ -402,12 +441,14 @@ const handleExport = async () => {
       doc.addPage();
       y = 20;
     }
-
-    doc.setFontSize(12);
+    y += 10; // extra spacing before summary
+    doc.setFont('times', 'bold');
+    doc.setFontSize(13);
     doc.text('Report Summary', 14, y);
     y += 6;
 
-    doc.setFontSize(10);
+    doc.setFont('times', 'normal');
+    doc.setFontSize(12);
 
     const summaryLines = doc.splitTextToSize(summary100, pageWidth - 28);
     doc.text(summaryLines, 14, y);
@@ -420,22 +461,26 @@ const handleExport = async () => {
       // =========================
       // ⚠️ FLOOD RISK
       // =========================
-      doc.setFontSize(12);
+      doc.setFont('times', 'bold');
+      doc.setFontSize(13);
       doc.text('Flood Risk Assessment', 14, y);
       y += 6;
 
-      doc.setFontSize(10);
+      doc.setFont('times', 'normal');
+      doc.setFontSize(12);
       doc.text(doc.splitTextToSize(floodRiskText, pageWidth - 28), 14, y);
       y += 15;
 
       // =========================
       // 📈 TREND TEXT
       // =========================
-      doc.setFontSize(12);
+      doc.setFont('times', 'bold');
+      doc.setFontSize(13);
       doc.text('Trend Analysis', 14, y);
       y += 6;
 
-      doc.setFontSize(10);
+      doc.setFont('times', 'normal');
+      doc.setFontSize(12);
       doc.text(doc.splitTextToSize(trendText, pageWidth - 28), 14, y);
       y += 15;
 
@@ -467,7 +512,32 @@ const handleExport = async () => {
           ['Date', 'Water Distance', 'Trend', 'Alert Level', 'Last Update'],
         ],
         body: tableData,
-        styles: { fontSize: 8 },
+
+        headStyles: {
+          fillColor: [255, 106, 0],
+          textColor: 255,
+          fontStyle: 'bold',
+        },
+
+        styles: {
+          fontSize: 8,
+          overflow: 'linebreak',
+        },
+
+        margin: { left: marginLeft, right: marginRight },
+
+        // 👇 ADD THIS INSIDE autoTable
+        didDrawPage: function (data) {
+          const pageCount = doc.getNumberOfPages();
+          
+          doc.setFontSize(10);
+          doc.text(
+            `Page ${data.pageNumber} of ${pageCount}`,
+            pageWidth / 2,
+            pageHeight - 10,
+            { align: 'center' }
+          );
+        },
       });
 
     // Update Y position after table
@@ -484,6 +554,7 @@ const handleExport = async () => {
       // destroy previous chart safely
       if ((window as any).myChartInstance) {
         (window as any).myChartInstance.destroy();
+        (window as any).myChartInstance = null;
       }
 
       // create canvas
@@ -521,14 +592,17 @@ const handleExport = async () => {
           },
         });
 
-    const chartImage = canvas.toDataURL('image/png');
+          const chartImage = canvas.toDataURL('image/png');
 
-    doc.addPage();
-    doc.setFontSize(14);
-    doc.text('Water Level Graph', 14, 20);
-    doc.addImage(chartImage, 'PNG', 15, 30, 180, 80);
-  }
-}
+          doc.addPage();
+          doc.setFontSize(14);
+          doc.text('Water Level Graph', 14, 20);
+          doc.addImage(chartImage, 'PNG', marginLeft, y + 10, 170, 80);
+
+          y += 100; // adjust Y position after chart
+        }
+      }
+      
       // =========================
       // 💾 EXPORT FILE
       // =========================
