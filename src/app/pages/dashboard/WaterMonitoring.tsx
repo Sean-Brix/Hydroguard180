@@ -107,11 +107,38 @@ export function WaterMonitoring() {
     }
   };
 
+  // Helper to get alert level info by its numeric level
   const getAlertLevelByLevel = (level: number) => {
     return alertLevels.find((a: any) => a.level === level);
   };
 
   const getAlertLevels = () => alertLevels;
+
+  const get30MinIntervalData = (data: any[]) => {
+    if (!data.length) return [];
+
+    const sorted = [...data].sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+
+    const result = [sorted[0]];
+
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = result[result.length - 1];
+      const current = sorted[i];
+
+      const diffMinutes =
+        (new Date(current.timestamp).getTime() -
+          new Date(prev.timestamp).getTime()) /
+        (1000 * 60);
+
+      if (diffMinutes >= 30) {
+        result.push(current);
+      }
+    }
+
+    return result;
+  };
 
   const applyFilters = () => {
     let filtered = [...readings];
@@ -158,6 +185,7 @@ export function WaterMonitoring() {
 
     setFilteredReadings(filtered);
   };
+
 
   const handleAddReading = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,20 +239,6 @@ const handleExport = async () => {
       const sortedReadings = [...filteredReadings].sort(
         (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
       );
-
-      // ===========================
-      // FILTERED DATA IN 30 MINUTES
-      // ===========================
-      const filtered30MinData = sortedReadings.filter((reading, index) => {
-        if (index === 0) return true;
-
-        const currentTime = new Date(reading.timestamp).getTime();
-        const prevTime = new Date(sortedReadings[index - 1].timestamp).getTime();
-
-        const diffMinutes = (currentTime - prevTime) / (1000 * 60);
-
-        return diffMinutes >= 30;
-      });
 
       // Basic statistics
       const avgWaterLevel =
@@ -424,6 +438,11 @@ const handleExport = async () => {
       doc.setFontSize(10);
       doc.text(doc.splitTextToSize(trendText, pageWidth - 28), 14, y);
       y += 15;
+
+      // ===========================
+      // STEP 1: GET 30-MIN DATA
+      // ===========================
+      const filtered30MinData = get30MinIntervalData(filteredReadings);
 
       // =========================
       // 📋 TABLE (UPDATED STRUCTURE)
