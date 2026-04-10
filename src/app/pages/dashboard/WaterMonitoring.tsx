@@ -529,7 +529,9 @@ const handleExport = async () => {
         // 👇 ADD THIS INSIDE autoTable
         didDrawPage: function (data) {
           const pageCount = doc.getNumberOfPages();
-          
+          const pageSize = doc.internal.pageSize;
+          const pageHeight = pageSize.height;
+
           doc.setFontSize(10);
           doc.text(
             `Page ${data.pageNumber} of ${pageCount}`,
@@ -592,17 +594,33 @@ const handleExport = async () => {
           },
         });
 
-          const chartImage = canvas.toDataURL('image/png');
+    const chartImage = canvas.toDataURL('image/png');
 
-          doc.addPage();
-          doc.setFontSize(14);
-          doc.text('Water Level Graph', 14, 20);
-          doc.addImage(chartImage, 'PNG', marginLeft, y + 10, 170, 80);
+    doc.addPage();
+    doc.setFontSize(14);
+    doc.text('Water Level Graph', 14, 20);
+    doc.addImage(chartImage, 'PNG', marginLeft, y + 10, 170, 80);
 
-          y += 100; // adjust Y position after chart
-        }
-      }
-      
+    y += 100; // adjust Y position after chart
+  }
+}
+
+// =========================
+// PAGE NUMBERS
+// =========================
+const pageCount = doc.getNumberOfPages();
+
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(10);
+
+    doc.text(
+      `Page ${i} of ${pageCount}`,
+      pageWidth / 2,
+      pageHeight - 10,
+      { align: 'center' }
+    );
+  }
       // =========================
       // 💾 EXPORT FILE
       // =========================
