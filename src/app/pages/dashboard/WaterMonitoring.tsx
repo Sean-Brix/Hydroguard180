@@ -430,7 +430,7 @@ const handleExport = async () => {
         styles: { fontSize: 8 },
       });
 
-      const filtered30MinData = filteredReadings.filter((reading, index) => {
+      const filtered1HourData = filteredReadings.filter((reading, index) => {
         if (index === 0) return true;
 
         const currentTime = new Date(reading.timestamp).getTime();
@@ -438,14 +438,14 @@ const handleExport = async () => {
 
         const diffMinutes = (currentTime - prevTime) / (1000 * 60);
 
-        return diffMinutes >= 30;
+        return diffMinutes >= 60;
       });
 
-      const chartLabels = filtered30MinData.map(r =>
+      const chartLabels = filtered1HourData.map(r =>
         format(new Date(r.timestamp), 'MM/dd HH:mm')
       );
 
-      const chartData = filtered30MinData.map(r => r.waterLevel);
+      const chartData = filtered1HourData.map(r => r.waterLevel);
 
       // =========================
       // 📊 CHART GENERATION
@@ -478,7 +478,7 @@ const handleExport = async () => {
           plugins: {
             title: {
               display: true,
-              text: 'Water Level Trend (30-min Intervals)',
+              text: 'Water Level Trend (1-Hour Interval)',
             },
           },
         },
