@@ -160,39 +160,61 @@ export function WaterMonitoring() {
     }
   };
 
-    const handleExport = async () => {
-    try {
+const handleExport = async () => {
+  try {
       const { default: jsPDF } = await import('jspdf');
       const { default: autoTable } = await import('jspdf-autotable');
-      /*const { default: Chart } = await import('chart.js/auto');*/
+      const { Chart } = await import('chart.js/auto');
 
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
       const timestamp = format(new Date(), 'MMMM dd, yyyy h:mm a');
 
       // =========================
-      // 📊 CALCULATIONS FIRST
+      // 📊 WATER LEVEL DATA
       // =========================
       const waterLevels = filteredReadings.map(r => r.waterLevel);
 
       const avgWaterLevel =
-        waterLevels.reduce((sum, level) => sum + level, 0) / (waterLevels.length || 1);
+        waterLevels.reduce((sum, val) => sum + val, 0) / (waterLevels.length || 1);
 
       const maxWaterLevel = Math.max(...waterLevels, 0);
       const minWaterLevel = Math.min(...waterLevels, 0);
 
+      // =========================
+      // ⚠️ ALERT ANALYSIS
+      // =========================
       const alertDistribution: Record<number, number> = {};
+
       filteredReadings.forEach(r => {
-        alertDistribution[r.alertLevel] = (alertDistribution[r.alertLevel] || 0) + 1;
+        alertDistribution[r.alertLevel] =
+          (alertDistribution[r.alertLevel] || 0) + 1;
       });
 
       const mostFrequentAlert = Object.entries(alertDistribution)
         .sort((a, b) => b[1] - a[1])[0];
 
+      const highestAlertLevel = Math.max(
+        ...filteredReadings.map(r => r.alertLevel),
+        0
+      );
+
+      let floodRiskText = '';
+
+      if (highestAlertLevel >= 4)
+        floodRiskText = 'HIGH RISK: Possible flooding. Immediate action required.';
+      else if (highestAlertLevel === 3)
+        floodRiskText = 'MODERATE RISK: Water levels rising.';
+      else if (highestAlertLevel === 2)
+        floodRiskText = 'LOW RISK: Slight elevation detected.';
+      else floodRiskText = 'SAFE: Normal water levels.';
+
       // =========================
-      // 🧠 TREND ANALYSIS
+      // 📈 TREND ANALYSIS
       // =========================
-      let rising = 0, falling = 0, stable = 0;
+      let rising = 0,
+        falling = 0,
+        stable = 0;
 
       filteredReadings.forEach((reading, index) => {
         const prev = filteredReadings[index - 1];
@@ -203,71 +225,68 @@ export function WaterMonitoring() {
         else stable++;
       });
 
-      // =========================
-      // ⚠️ FLOOD RISK
-      // =========================
-      const highestAlertLevel = Math.max(...filteredReadings.map(r => r.alertLevel), 0);
-
-      let floodRiskText = '';
-      if (highestAlertLevel >= 4) floodRiskText = 'HIGH RISK: Possible flooding. Immediate action required.';
-      else if (highestAlertLevel === 3) floodRiskText = 'MODERATE RISK: Water levels rising.';
-      else if (highestAlertLevel === 2) floodRiskText = 'LOW RISK: Slight elevation detected.';
-      else floodRiskText = 'SAFE: Normal water levels.';
-
-      // =========================
-      // 📈 TREND STATEMENT
-      // =========================
       let trendText = '';
-      if (rising > falling) trendText = 'Water levels are increasing over time.';
-      else if (falling > rising) trendText = 'Water levels are decreasing.';
+
+      if (rising > falling)
+        trendText = 'Water levels are increasing over time.';
+      else if (falling > rising)
+        trendText = 'Water levels are decreasing.';
       else trendText = 'Water levels are stable.';
 
       // =========================
-      // 📝 PAGE 1 CONTENT
+      // 📄 HEADER
       // =========================
-      doc.setFontSize(20);
-      doc.text('Water Monitoring Report', pageWidth / 2, 20, { align: 'center' });
+      doc.setFontSize(18);
+      doc.text('HydroGuard 180 Water Monitoring Report', pageWidth / 2, 20, {
+        align: 'center',
+      });
 
       doc.setFontSize(10);
       doc.text(timestamp, pageWidth / 2, 27, { align: 'center' });
 
-      let yPosition = 40;
-
-      // Summary
-      const summaryText = `
-  This report presents the analysis of ${filteredReadings.length} recorded water readings.
-
-  Average: ${avgWaterLevel.toFixed(2)} cm
-  Highest: ${maxWaterLevel.toFixed(2)} cm
-  Lowest: ${minWaterLevel.toFixed(2)} cm
-
-  Most frequent alert: Level ${mostFrequentAlert?.[0] || 'N/A'}.
-      `;
-
-      const splitSummary = doc.splitTextToSize(summaryText, pageWidth - 28);
-      doc.text(splitSummary, 14, yPosition);
-      yPosition += splitSummary.length * 5 + 8;
-
-      // Flood Risk
-      doc.setFontSize(12);
-      doc.text('Flood Risk Interpretation', 14, yPosition);
-      yPosition += 6;
-
-      doc.setFontSize(10);
-      doc.text(doc.splitTextToSize(floodRiskText, pageWidth - 28), 14, yPosition);
-      yPosition += 10;
-
-      // Trend
-      doc.setFontSize(12);
-      doc.text('Trend Observation', 14, yPosition);
-      yPosition += 6;
-
-      doc.setFontSize(10);
-      doc.text(doc.splitTextToSize(trendText, pageWidth - 28), 14, yPosition);
-      yPosition += 10;
+      let y = 40;
 
       // =========================
-      // 📋 TABLE (UPDATED)
+      // 📌 SUMMARY SECTION
+      // =========================
+      const summary = `
+  This report contains ${filteredReadings.length} water level readings collected by HydroGuard 180 system.
+
+  Average Water Level: ${avgWaterLevel.toFixed(2)} cm
+  Maximum Water Level: ${maxWaterLevel.toFixed(2)} cm
+  Minimum Water Level: ${minWaterLevel.toFixed(2)} cm
+
+  Most Frequent Alert Level: ${mostFrequentAlert?.[0] || 'N/A'}
+      `;
+
+      const splitSummary = doc.splitTextToSize(summary, pageWidth - 28);
+      doc.text(splitSummary, 14, y);
+      y += splitSummary.length * 5 + 10;
+
+      // =========================
+      // ⚠️ FLOOD RISK
+      // =========================
+      doc.setFontSize(12);
+      doc.text('Flood Risk Assessment', 14, y);
+      y += 6;
+
+      doc.setFontSize(10);
+      doc.text(doc.splitTextToSize(floodRiskText, pageWidth - 28), 14, y);
+      y += 15;
+
+      // =========================
+      // 📈 TREND TEXT
+      // =========================
+      doc.setFontSize(12);
+      doc.text('Trend Analysis', 14, y);
+      y += 6;
+
+      doc.setFontSize(10);
+      doc.text(doc.splitTextToSize(trendText, pageWidth - 28), 14, y);
+      y += 15;
+
+      // =========================
+      // 📋 TABLE (UPDATED STRUCTURE)
       // =========================
       const tableData = filteredReadings.map((reading, index) => {
         const prev = filteredReadings[index - 1];
@@ -276,23 +295,24 @@ export function WaterMonitoring() {
 
         return [
           format(new Date(reading.timestamp), 'MMM dd, yyyy'),
-          format(new Date(reading.timestamp), 'h:mm a'),
           `${reading.waterLevel} cm`,
           trend,
           `Level ${reading.alertLevel} - ${alertInfo?.name || 'Unknown'}`,
-          formatTimeWithSeconds(reading.timestamp)
+          format(new Date(reading.timestamp), 'MMM dd, yyyy h:mm:ss a'), // LAST UPDATE
         ];
       });
 
       autoTable(doc, {
-        startY: yPosition,
-        head: [['Date', 'Time', 'Water Distance', 'Trend', 'Alert Level', 'Last Update']],
+        startY: y,
+        head: [
+          ['Date', 'Water Distance', 'Trend', 'Alert Level', 'Last Update'],
+        ],
         body: tableData,
-        styles: { fontSize: 8 }
+        styles: { fontSize: 8 },
       });
 
       // =========================
-      // 📊 CHART PAGE
+      // 📊 CHART GENERATION
       // =========================
       const canvas = document.createElement('canvas');
       canvas.width = 600;
@@ -307,14 +327,16 @@ export function WaterMonitoring() {
           labels: filteredReadings.map(r =>
             format(new Date(r.timestamp), 'MM/dd HH:mm')
           ),
-          datasets: [{
-            label: 'Water Level',
-            data: waterLevels,
-            borderWidth: 2,
-            tension: 0.3,
-            borderColor: '#FF6A00',
-            fill: false
-          }]
+          datasets: [
+            {
+              label: 'Water Level (cm)',
+              data: waterLevels,
+              borderWidth: 2,
+              tension: 0.3,
+              borderColor: '#FF6A00',
+              fill: false,
+            },
+          ],
         },
         options: {
           responsive: false,
@@ -322,31 +344,32 @@ export function WaterMonitoring() {
           plugins: {
             title: {
               display: true,
-              text: 'Water Level Trend Over Time'
-            }
-          }
-        }
+              text: 'Water Level Trend Over Time',
+            },
+          },
+        },
       });
 
       const chartImage = canvas.toDataURL('image/png');
 
       doc.addPage();
+      doc.setFontSize(14);
       doc.text('Water Level Graph', 14, 20);
       doc.addImage(chartImage, 'PNG', 15, 30, 180, 80);
 
       // =========================
-      // 💾 SAVE
+      // 💾 EXPORT FILE
       // =========================
-      doc.save(`water-monitoring-${Date.now()}.pdf`);
-      toast.success('Exported successfully');
+      doc.save(`hydroguard-180-report-${Date.now()}.pdf`);
 
+      toast.success('Report exported successfully!');
     } catch (error) {
       console.error(error);
       toast.error('Export failed');
     }
   };
 
-  const getAlertBadge = (level: number) => {
+const getAlertBadge = (level: number) => {
     const alertInfo = getAlertLevelByLevel(level);
     if (!alertInfo) return null;
     
