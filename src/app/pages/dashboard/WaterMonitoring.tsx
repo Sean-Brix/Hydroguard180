@@ -197,7 +197,6 @@ const handleExport = async () => {
   try {
       const { default: jsPDF } = await import('jspdf');
       const { default: autoTable } = await import('jspdf-autotable');
-      const { Chart } = await import('chart.js/auto');
 
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
@@ -581,20 +580,6 @@ const handleExport = async () => {
       {/* Filters + Stats — compact row */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-100 px-4 py-3 flex-shrink-0">
         <div className="flex flex-wrap items-end gap-2">
-          
-          {/* Date Filter */}
-          <div className="flex-1 min-w-[140px]">
-            <label className="block text-[10px] text-gray-500 mb-1">
-              Date
-            </label>
-            <Input
-              type="date"
-              className="h-8 text-sm"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-            />
-          </div>
-
           <div className="flex-1 min-w-[160px]">
             <label className="block text-[10px] text-gray-500 mb-1">
               <Filter size={10} className="inline mr-0.5" />
