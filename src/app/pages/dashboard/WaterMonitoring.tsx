@@ -479,7 +479,8 @@ const handleExport = async () => {
       // =========================
       // 💾 EXPORT FILE
       // =========================
-      doc.save(`hydroguard-180-report-${Date.now()}.pdf`);
+      const fileDate = format(new Date(), 'MM-dd-yy');
+      doc.save(`Report Analytic of HydroGuard180 Water Monitoring (${fileDate}).pdf`);
 
       toast.success('Report exported successfully!');
     } catch (error) {
