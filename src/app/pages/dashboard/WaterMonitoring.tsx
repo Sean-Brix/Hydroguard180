@@ -138,10 +138,22 @@ export function WaterMonitoring() {
       filtered = filtered.filter(r => r.alertLevel === parseInt(filterLevel));
     }
 
-    if (searchQuery) {
-      filtered = filtered.filter(r => 
-        new Date(r.timestamp).toLocaleString().includes(searchQuery)
-      );
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+
+      filtered = filtered.filter(r => {
+        const date = format(new Date(r.timestamp), 'MMMM dd, yyyy').toLowerCase();
+        const time = format(new Date(r.timestamp), 'h:mm:ss a').toLowerCase();
+        const waterLevel = String(r.waterLevel).toLowerCase();
+        const alertLevel = `level ${r.alertLevel}`.toLowerCase();
+
+        return (
+          date.includes(query) ||
+          time.includes(query) ||
+          waterLevel.includes(query) ||
+          alertLevel.includes(query)
+        );
+      });
     }
 
     setFilteredReadings(filtered);
@@ -580,33 +592,6 @@ const handleExport = async () => {
               className="h-8 text-sm"
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-            />
-          </div>
-
-          {/* Month Filter */}
-          <div className="flex-1 min-w-[140px]">
-            <label className="block text-[10px] text-gray-500 mb-1">
-              Month
-            </label>
-            <Input
-              type="month"
-              className="h-8 text-sm"
-              value={monthFilter}
-              onChange={(e) => setMonthFilter(e.target.value)}
-            />
-          </div>
-
-          {/* Year Filter */}
-          <div className="flex-1 min-w-[140px]">
-            <label className="block text-[10px] text-gray-500 mb-1">
-              Year
-            </label>
-            <Input
-              type="number"
-              placeholder="Year (e.g. 2024)"
-              className="h-8 text-sm"
-              value={yearFilter}
-              onChange={(e) => setYearFilter(e.target.value)}
             />
           </div>
 
