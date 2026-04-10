@@ -470,56 +470,65 @@ const handleExport = async () => {
         styles: { fontSize: 8 },
       });
 
-      const chartLabels = filtered30MinData.map(r =>
-        format(new Date(r.timestamp), 'MM/dd HH:mm')
-      );
+    // Update Y position after table
+    const chartLabels = filtered30MinData.map(r =>
+      format(new Date(r.timestamp), 'MM/dd HH:mm')
+    );
 
-      const chartData = filtered30MinData.map(r => r.waterLevel);
+    const chartData = filtered30MinData.map(r => r.waterLevel);
 
-      // =========================
-      // 📊 CHART GENERATION
-      // =========================
+    // ❗ FIX: proper validation
+    if (!chartData || chartData.length < 2) {
+      console.warn("Not enough data for chart");
+    } else {
+      // destroy previous chart safely
+      if ((window as any).myChartInstance) {
+        (window as any).myChartInstance.destroy();
+      }
+
+      // create canvas
       const canvas = document.createElement('canvas');
       canvas.width = 600;
       canvas.height = 300;
 
       const ctx = canvas.getContext('2d');
-      if (!ctx) return;
 
-      new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: chartLabels,
-          datasets: [
-            {
-              label: 'Water Level (cm)',
-              data: chartData,
-              borderWidth: 2,
-              tension: 0.3,
-              borderColor: '#FF6A00',
-              fill: false,
-            },
-          ],
-        },
-        options: {
-          responsive: false,
-          animation: false,
-          plugins: {
-            title: {
-              display: true,
-              text: 'Water Level Trend (1-Hour Interval)',
+      if (ctx) {
+        (window as any).myChartInstance = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: chartLabels,
+            datasets: [
+              {
+                label: 'Water Level (cm)',
+                data: chartData,
+                borderWidth: 2,
+                tension: 0.3,
+                borderColor: '#FF6A00',
+                fill: false,
+              },
+            ],
+          },
+          options: {
+            responsive: false,
+            animation: false,
+            plugins: {
+              title: {
+                display: true,
+                text: 'Water Level Trend (1-Hour Interval)',
+              },
             },
           },
-        },
-      });
+        });
 
-      const chartImage = canvas.toDataURL('image/png');
+    const chartImage = canvas.toDataURL('image/png');
 
-      doc.addPage();
-      doc.setFontSize(14);
-      doc.text('Water Level Graph', 14, 20);
-      doc.addImage(chartImage, 'PNG', 15, 30, 180, 80);
-
+    doc.addPage();
+    doc.setFontSize(14);
+    doc.text('Water Level Graph', 14, 20);
+    doc.addImage(chartImage, 'PNG', 15, 30, 180, 80);
+  }
+}
       // =========================
       // 💾 EXPORT FILE
       // =========================
